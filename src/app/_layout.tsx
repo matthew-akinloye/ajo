@@ -9,7 +9,7 @@ import {
   JetBrainsMono_500Medium,
 } from "@expo-google-fonts/jetbrains-mono";
 import { useFonts } from "expo-font";
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from "expo-router";
 import { useColorScheme } from "react-native";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
@@ -22,6 +22,10 @@ function AuthenticatedLayout() {
     return <AnimatedSplashOverlay />;
   }
 
+  if (!isAuthenticated) {
+    console.log("Not authenticated");
+    router.push("/landing");
+  }
   if (!isAuthenticated) {
     return (
       <Stack screenOptions={{ headerShown: false }} initialRouteName="landing">

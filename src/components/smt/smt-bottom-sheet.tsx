@@ -1,3 +1,4 @@
+// components/smt/smt-bottom-sheet.tsx
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import {
   StyleSheet,
@@ -12,10 +13,6 @@ import BottomSheet, {
   BottomSheetView,
   BottomSheetProps as ExpoBottomSheetProps,
 } from '@expo/ui/community/bottom-sheet';
-
-// -----------------------------------------------------------------------------
-// Types
-// -----------------------------------------------------------------------------
 
 export interface ReusableBottomSheetProps
   extends Omit<ExpoBottomSheetProps, 'children' | 'snapPoints' | 'index' | 'onChange' | 'onClose'> {
@@ -38,21 +35,7 @@ export interface ReusableBottomSheetRef {
   snapToIndex: (index: number) => void;
   snapToPosition: (position: string | number) => void;
   close: () => void;
-  expand: () => void;
-  collapse: () => void;
 }
-
-// Local type for the library's ref methods (since it's not exported)
-type LibraryBottomSheetRef = {
-  snapToIndex: (index: number) => void;
-  snapToPosition: (position: string | number) => void;
-  close: () => void;
-  getCurrentIndex: () => number;
-};
-
-// -----------------------------------------------------------------------------
-// Component
-// -----------------------------------------------------------------------------
 
 const ReusableBottomSheet = forwardRef<
   ReusableBottomSheetRef,
@@ -78,7 +61,6 @@ const ReusableBottomSheet = forwardRef<
     },
     ref
   ) => {
-    // Use any because the library doesn't export a proper ref type
     const sheetRef = useRef<any>(null);
 
     useImperativeHandle(ref, () => ({
@@ -86,16 +68,6 @@ const ReusableBottomSheet = forwardRef<
       snapToPosition: (position: string | number) =>
         sheetRef.current?.snapToPosition(position),
       close: () => sheetRef.current?.close(),
-      expand: () => {
-        const currentIndex = sheetRef.current?.getCurrentIndex() ?? -1;
-        const nextIndex = Math.min(currentIndex + 1, snapPoints.length - 1);
-        sheetRef.current?.snapToIndex(nextIndex);
-      },
-      collapse: () => {
-        const currentIndex = sheetRef.current?.getCurrentIndex() ?? -1;
-        const prevIndex = Math.max(currentIndex - 1, -1);
-        sheetRef.current?.snapToIndex(prevIndex);
-      },
     }));
 
     const renderContent = () => {
@@ -144,12 +116,7 @@ const ReusableBottomSheet = forwardRef<
   }
 );
 
-// ✅ Fix ESLint warning: add display name
 ReusableBottomSheet.displayName = 'ReusableBottomSheet';
-
-// -----------------------------------------------------------------------------
-// Styles
-// -----------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

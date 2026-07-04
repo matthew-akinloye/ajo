@@ -1,22 +1,18 @@
-/**
- * àjó Login Screen
- * Based on index.tsx blueprint - typography-first, minimal design
- */
-
-import { Card } from "@/components/ui/Card";
-import { Text } from "@/components/ui/Text";
+import AjoButton from "@/components/ui/AjoButton";
+import AjoInput from "@/components/ui/AjoInput";
 import { useAuth } from "@/contexts/AuthContext";
 import { colors } from "@/theme/colors";
-import { radius, spacing } from "@/theme/spacing";
+import { spacing } from "@/theme/spacing";
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
+  Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,11 +20,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
+
+  // Form state
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Validation and submission
   const handleLogin = async () => {
     if (!phone || !pin) {
       setError("Please fill in all fields");
@@ -47,6 +46,7 @@ export default function LoginScreen() {
       await login({ phone, pin });
       router.replace("/(tabs)");
     } catch (err) {
+      // Generic error per spec
       setError("Invalid phone number or PIN");
     } finally {
       setIsLoading(false);
@@ -63,85 +63,65 @@ export default function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo/Brand */}
-          <View style={styles.brandSection}>
-            <View style={styles.logo}>
-              <Text variant="hero" color={colors.primary}>
-                àjó
-              </Text>
-            </View>
-            <Text
-              variant="body"
-              color={colors.textTertiary}
-              style={styles.tagline}
-            >
-              Save together, grow together
-            </Text>
+          {/* Back Arrow (optional – if user comes from signup or elsewhere) */}
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color="#000" />
+          </TouchableOpacity>
+
+          {/* Header */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Welcome back</Text>
+            <Text style={styles.subtitle}>Sign in to access your savings circles</Text>
           </View>
 
-          {/* Login Form */}
-          <Card variant="default" padding={spacing.xl} style={styles.formCard}>
-            <Text variant="h2" style={styles.title}>
-              Welcome back
-            </Text>
-            <Text
-              variant="label"
-              color={colors.textTertiary}
-              style={styles.subtitle}
+          {/* Form Fields */}
+          <View style={styles.formContainer}>
+            {/* Phone Number */}
+            <AjoInput
+              label="Phone Number"
+              placeholder="080 123 456 78"
+              value={phone}
+              onChangeText={setPhone}
+              leftIcon={<Feather name="phone" size={20} color="#666" />}
+              keyboardType="phone-pad"
+              containerStyle={styles.inputContainer}
+            />
+
+            {/* PIN */}
+            <AjoInput
+              label="4-digit PIN"
+              placeholder="****"
+              value={pin}
+              onChangeText={setPin}
+              leftIcon={<Feather name="lock" size={20} color="#666" />}
+              secureTextEntry
+              maxLength={4}
+              keyboardType="number-pad"
+              containerStyle={styles.inputContainer}
+            />
+
+            {/* Error Message */}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+            {/* Login Button */}
+            <AjoButton
+              title={isLoading ? "Signing in..." : "Sign In"}
+              onPress={handleLogin}
+              loading={isLoading}
+              disabled={isLoading}
+              style={styles.button}
+            />
+
+            {/* Sign Up Link */}
+            <TouchableOpacity
+              style={styles.signupLink}
+              onPress={() => router.push("/auth/signup")}
             >
-              Sign in to access your savings circles
-            </Text>
-
-            <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Phone number"
-                placeholderTextColor={colors.textTertiary}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                autoCapitalize="none"
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="4-digit PIN"
-                placeholderTextColor={colors.textTertiary}
-                value={pin}
-                onChangeText={setPin}
-                keyboardType="number-pad"
-                maxLength={4}
-                secureTextEntry
-              />
-
-              {error ? (
-                <Text variant="label" color={colors.error} style={styles.error}>
-                  {error}
-                </Text>
-              ) : null}
-
-              <Pressable
-                style={styles.button}
-                onPress={handleLogin}
-                disabled={isLoading}
-              >
-                <Text variant="label" color={colors.textInverted} weight="600">
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Text>
-              </Pressable>
-            </View>
-          </Card>
-
-          {/* Sign Up Link */}
-          <View style={styles.footer}>
-            <Text variant="label" color={colors.textTertiary}>
-              Don't have an account?{" "}
-            </Text>
-            <Pressable onPress={() => router.push("/auth/signup")}>
-              <Text variant="label" color={colors.primary} weight="600">
-                Sign up
+              <Text style={styles.signupText}>
+                Don't have an account?{" "}
+                <Text style={styles.signupHighlight}>Sign up</Text>
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -149,6 +129,7 @@ export default function LoginScreen() {
   );
 }
 
+// ---------- Styles (matching SignupScreen) ----------
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -159,51 +140,68 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: spacing.lg,
-    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
   },
-  brandSection: {
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  headerContainer: {
     alignItems: "center",
-    marginBottom: spacing.xl,
-  },
-  logo: {
-    marginBottom: spacing.sm,
-  },
-  tagline: {
-    textAlign: "center",
-  },
-  formCard: {
-    marginBottom: spacing.lg,
+    marginBottom: 32,
   },
   title: {
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    marginBottom: spacing.lg,
-  },
-  form: {
-    gap: spacing.md,
-  },
-  input: {
-    height: 48,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    fontFamily: "Poppins",
+    fontSize: 24,
+    fontWeight: "500",
     color: colors.textPrimary,
-    fontSize: 16,
-  },
-  error: {
+    lineHeight: 28,
     textAlign: "center",
   },
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    alignItems: "center",
+  subtitle: {
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "400",
+    color: colors.textSecondary,
+    lineHeight: 16,
+    textAlign: "center",
+    marginTop: 4,
   },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+  formContainer: {
+    width: "100%",
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  errorText: {
+    fontFamily: "Inter",
+    fontSize: 12,
+    color: colors.error,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  button: {
+    marginBottom: 16,
+  },
+  signupLink: {
+    alignSelf: "center",
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  signupText: {
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "400",
+    color: colors.textSecondary,
+  },
+  signupHighlight: {
+    color: colors.primary,
+    fontWeight: "500",
+    textDecorationLine: "underline",
   },
 });

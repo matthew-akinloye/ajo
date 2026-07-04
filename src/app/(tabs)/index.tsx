@@ -1,37 +1,50 @@
-import { QuickActionButton } from "@/components/QuickActionButton";
 import Header from "@/components/smt/smt-header";
-import { Button } from "@/components/ui/Button";
+import { AjoTypography } from "@/components/ui/AjoTypography";
+import { AjoLogo } from "@/components/ui/AjoLogo";
 import { Card } from "@/components/ui/Card";
-import { ProgressRing } from "@/components/ui/ProgressRing";
-import { Text } from "@/components/ui/Text";
+import { PinModal, PinModalRef } from "@/components/ui/PinModal";
+import { useAuth } from "@/contexts/AuthContext";
 import { apiService } from "@/services/api.service";
 import { CircleOut, ContributionOut, WalletOut } from "@/services/api.types";
 import { colors } from "@/theme/colors";
-import { radius, spacing } from "@/theme/spacing";
-import { MaterialIcons } from "@expo/vector-icons";
+import { spacing } from "@/theme/spacing";
+import { Feather } from "@expo/vector-icons";
+import Ionicons from '@expo/vector-icons/Ionicons';
+
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
   View,
+  Image,
 } from "react-native";
+import AjoButton from "@/components/ui/AjoButton";
+import { radius } from "@/theme/radius";
+import { CircleList } from "@/components/circles/CircleList";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+  const pinModalRef = useRef<PinModalRef>(null);
+
   const [wallet, setWallet] = useState<WalletOut | null>(null);
+  const [circles, setCircles] = useState<CircleOut[]>([]);
   const [activeCircle, setActiveCircle] = useState<CircleOut | null>(null);
   const [contributions, setContributions] = useState<ContributionOut[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showBalance, setShowBalance] = useState(true);
 
   useEffect(() => {
-    loadHomeData();
-  }, []);
+    if (isAuthenticated) {
+      loadHomeData();
+    }
+  }, [isAuthenticated]);
 
   const loadHomeData = async () => {
     try {
@@ -41,8 +54,8 @@ export default function HomeScreen() {
       ]);
 
       setWallet(walletData);
+      setCircles(circlesData);
 
-      // Get first active circle as the "active" one
       const active =
         circlesData.find((c) => c.status === "active") ||
         circlesData[0] ||
@@ -66,114 +79,274 @@ export default function HomeScreen() {
     setIsRefreshing(false);
   };
 
-  const handleContribute = async () => {
+  // PIN‑protected actions
+  const handleContribute = () => {
     if (!activeCircle) {
-      Alert.alert("No circle", "Join or create a circle before contributing.");
+      Alert.alert(
+        "No active circle",
+        "Join or create a circle before contributing.",
+      );
       return;
     }
+    pinModalRef.current?.show({
+      title: "Confirm Contribution",
+      subtitle: `Enter your PIN to contribute ₦${activeCircle.contribution_amount.toLocaleString()}`,
+      onConfirm: async (pin) => {
+        await apiService.verifyPin({ pin });
+        const contribution = await apiService.makeContribution(
+          activeCircle.id,
+          { pin },
+        );
+        await loadHomeData();
+        Alert.alert(
+          "Success",
+          `Contribution of ₦${contribution.amount.toLocaleString()} recorded.`,
+        );
+      },
+    });
+  };
 
-    Alert.prompt(
-      "Make contribution",
-      "Enter your 4-digit PIN to confirm",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Continue",
-          onPress: async (pin) => {
-            if (!pin || pin.length !== 4) {
-              Alert.alert("Invalid PIN", "Please enter a 4-digit PIN.");
-              return;
-            }
-            try {
-              await apiService.makeContribution(activeCircle.id, { pin });
-              Alert.alert("Success", "Your contribution has been recorded.");
-              await loadHomeData();
-            } catch (error) {
-              Alert.alert("Unable to contribute", error instanceof Error ? error.message : "Please try again.");
-            }
-          },
-        },
-      ],
-      "secure-text",
-    );
+  const handleInvite = () => {
+    if (!activeCircle) {
+      Alert.alert(
+        "No active circle",
+        "Create or join a circle to share an invite.",
+      );
+      return;
+    }
+    pinModalRef.current?.show({
+      title: "Generate Invite",
+      subtitle: "Enter your PIN to create an invite link",
+      onConfirm: async (pin) => {
+        await apiService.verifyPin({ pin });
+        const invite = await apiService.createInvite(activeCircle.id, {
+          invitee_contact: null,
+        });
+        Alert.alert("Invite ready", `Share this code: ${invite.code}`);
+        // Optionally copy to clipboard
+      },
+    });
   };
 
   const handleWithdraw = () => {
-    Alert.alert("Withdraw funds", "Withdrawals will be processed from the wallet screen after you enter your bank details.");
     router.push("/wallet");
   };
 
-  const handleInvite = async () => {
-    if (!activeCircle) {
-      Alert.alert("No circle", "Create or join a circle to share an invite.");
-      return;
-    }
-
-    try {
-      const invite = await apiService.createInvite(activeCircle.id, { invitee_contact: null });
-      Alert.alert("Invite ready", `Invite code: ${invite.code}`);
-    } catch (error) {
-      Alert.alert("Unable to create invite", error instanceof Error ? error.message : "Please try again.");
-    }
+  const handleFundWallet = () => {
+    router.push("/wallet");
   };
 
-  // Empty state
-  if (!isLoading && !activeCircle) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.emptyContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <Text variant="h1">Welcome</Text>
-            <Pressable>
-              <MaterialIcons
-                name="notifications-none"
-                size={28}
-                color={colors.textPrimary}
-              />
-            </Pressable>
-          </View>
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
 
-          <View style={styles.emptyContent}>
-            <MaterialIcons
-              name="groups"
-              size={80}
+  // Recent contributions
+  const renderRecentActivity = () => {
+    if (!activeCircle || contributions.length === 0) {
+      return (
+        <AjoTypography
+          variant="bodySmall"
+          color={colors.textTertiary}
+          style={styles.noActivity}
+        >
+          No contributions yet
+        </AjoTypography>
+      );
+    }
+    return contributions.slice(0, 3).map((c) => (
+      <View key={c.id} style={styles.activityRow}>
+        <View style={styles.activityIcon}>
+          <Feather name="user" size={12} color={colors.textInverted} />
+        </View>
+        <View style={styles.activityInfo}>
+          <AjoTypography variant="bodySmall" color={colors.textPrimary}>
+            {c.user_id || "Member"}
+          </AjoTypography>
+          <AjoTypography variant="bodySmall" color={colors.textTertiary}>
+            {new Date(c.paid_at).toLocaleDateString()}
+          </AjoTypography>
+        </View>
+        <AjoTypography variant="bodySmall" color={colors.primary}>
+          ₦{c.amount.toLocaleString()}
+        </AjoTypography>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor:
+                c.status === "paid" ? colors.successTint : colors.errorTint,
+            },
+          ]}
+        >
+          <AjoTypography
+            variant="chip"
+            color={c.status === "paid" ? colors.success : colors.error}
+          >
+            {c.status.toUpperCase()}
+          </AjoTypography>
+        </View>
+      </View>
+    ));
+  };
+
+  // Circles list with proper navigation
+  const renderCirclesList = () => {
+    if (circles.length === 0) {
+      return (
+        // <View style={styles.emptyStateContainer}>
+        //   <Card variant="default" padding={spacing.lg} style={styles.emptyCard}>
+        //     <View style={styles.emptyIconContainer}>
+        //       <Feather name="users" size={24} color={colors.textTertiary} />
+        //     </View>
+        //     <AjoTypography variant="body" style={styles.emptyTitle}>
+        //       No circles yet
+        //     </AjoTypography>
+        //     <AjoTypography
+        //       variant="bodySmall"
+        //       color={colors.textTertiary}
+        //       style={styles.emptySubtitle}
+        //     >
+        //       Create a circle or join one to start saving together.
+        //     </AjoTypography>
+        //     <TouchableOpacity
+        //       style={styles.emptyAction}
+        //       onPress={() => router.push("/explore")}
+        //     >
+        //       <AjoTypography variant="bodySmall" color={colors.primary}>
+        //         Explore circles
+        //       </AjoTypography>
+        //       <Feather name="arrow-right" size={12} color={colors.primary} />
+        //     </TouchableOpacity>
+        //   </Card>
+
+        //   <Card
+        //     variant="default"
+        //     padding={spacing.md}
+        //     style={styles.howAjoCard}
+        //   >
+        //     <View style={styles.howAjoRow}>
+        //       <View style={styles.howAjoIcon}>
+        //         <Feather name="shield" size={16} color={colors.primary} />
+        //       </View>
+        //       <View style={styles.howAjoText}>
+        //         <AjoTypography variant="bodySmall" color={colors.textPrimary}>
+        //           How ajo works
+        //         </AjoTypography>
+        //         <AjoTypography variant="bodySmall" color={colors.textTertiary}>
+        //           Savings circles, shared goals, built on trust.
+        //         </AjoTypography>
+        //       </View>
+        //     </View>
+        //     <TouchableOpacity
+        //       style={styles.howAjoAction}
+        //       onPress={() => router.push("/how-it-works")}
+        //     >
+        //       <AjoTypography variant="bodySmall" color={colors.primary}>
+        //         Learn more
+        //       </AjoTypography>
+        //       <Feather name="arrow-right" size={12} color={colors.primary} />
+        //     </TouchableOpacity>
+        //   </Card>
+        // </View>
+        <CircleList
+          circles={circles}
+          onPress={(circle) => router.push(`/circle/${circle.id}`)}
+        />
+      );
+    }
+
+    return (
+      <View style={styles.circlesSection}>
+        <View style={styles.sectionHeader}>
+          <AjoTypography variant="monoSmall">Your circles</AjoTypography>
+          <TouchableOpacity onPress={() => router.push("/explore")}>
+            <AjoTypography
+              variant="monoSmall"
+              color={colors.primary}
+              style={styles.viewAll}
+            >
+              View all
+            </AjoTypography>
+          </TouchableOpacity>
+        </View>
+        {circles.map((circle) => (
+          <TouchableOpacity
+            key={circle.id}
+            style={styles.circleCard}
+            onPress={() => router.push(`/circle/${circle.id}`)}
+          >
+            <View style={styles.circleInfo}>
+              <View style={styles.circleHeader}>
+                <AjoTypography variant="cardTitle">{circle.name}</AjoTypography>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor:
+                        circle.status === "active"
+                          ? colors.successTint
+                          : colors.surface,
+                    },
+                  ]}
+                >
+                  <AjoTypography
+                    variant="chip"
+                    color={
+                      circle.status === "active"
+                        ? colors.success
+                        : colors.textSecondary
+                    }
+                  >
+                    {circle.status.toUpperCase()}
+                  </AjoTypography>
+                </View>
+              </View>
+              <View style={styles.circleDetails}>
+                <Feather
+                  name="calendar"
+                  size={12}
+                  color={colors.textTertiary}
+                />
+                <AjoTypography variant="bodySmall" color={colors.textSecondary}>
+                  ₦{circle.contribution_amount.toLocaleString()} /{" "}
+                  {circle.frequency}
+                </AjoTypography>
+                <View style={styles.divider} />
+                <Feather name="users" size={12} color={colors.textTertiary} />
+                <AjoTypography variant="bodySmall" color={colors.textSecondary}>
+                  {circle.member_count}/{circle.member_capacity}
+                </AjoTypography>
+              </View>
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${(circle.total_saved / circle.cycle_goal) * 100}%`,
+                      },
+                    ]}
+                  />
+                </View>
+                <AjoTypography variant="chip" color={colors.textTertiary}>
+                  ₦{circle.total_saved.toLocaleString()} / ₦
+                  {circle.cycle_goal.toLocaleString()}
+                </AjoTypography>
+              </View>
+            </View>
+            <Feather
+              name="chevron-right"
+              size={20}
               color={colors.textTertiary}
             />
-            <Text variant="h2" style={styles.emptyTitle}>
-              Start Your First Circle
-            </Text>
-            <Text
-              variant="body"
-              color={colors.textSecondary}
-              style={styles.emptyText}
-            >
-              Join an existing savings circle or create your own to save
-              together with friends and family.
-            </Text>
-            <Button
-              label="Browse Circles"
-              variant="primary"
-              size="lg"
-              fullWidth
-              style={styles.exploreButton}
-              onPress={() => router.push("/explore")}
-            />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+          </TouchableOpacity>
+        ))}
+      </View>
     );
-  }
-
-  // Active state with circle data
-  const memberCount = activeCircle ? contributions.length : 0;
-  const progress = activeCircle
-    ? memberCount / activeCircle.member_capacity
-    : 0;
-  const savedAmount = activeCircle ? activeCircle.total_saved : 0;
-  const goalAmount = activeCircle ? activeCircle.cycle_goal : 0;
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -188,261 +361,190 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Header */}
-        {/* <View style={styles.header}>
-          <View>
-            <Text variant="label" color={colors.textTertiary}>
-              Welcome back
-            </Text>
-            <Text variant="subtitle" style={{ marginTop: spacing.xs }}>
-              Good day
-            </Text>
-          </View>
-          <Pressable>
-            <MaterialIcons
-              name="notifications-none"
-              size={28}
-              color={colors.textPrimary}
-            />
-          </Pressable>
-        </View> */}
-
         <Header
-          title="Ajo"
-          rightComponent={
-            <View style={styles.circleBadge}>
-              <MaterialIcons
-                name="check-circle"
-                size={16}
-                color={colors.primary}
-              />
-              <Text
-                variant="subtitle"
-                color={colors.primary}
-                weight="600"
-                style={{ marginLeft: spacing.xs }}
-              >
-                {activeCircle && (
-                  <>
-                    {memberCount}/{activeCircle.member_capacity}
-                  </>
-                )}
-              </Text>
-            </View>
-          }
+          leftComponent={<AjoLogo size="large" variant="symbol" />}
           rightButtons={[
             {
               icon: (
-                <MaterialIcons
-                  name="notifications-none"
-                  size={24}
-                  color={colors.textPrimary}
-                />
-              ), // color injected automatically
-              onPress: () => console.log("Search"),
+                <Feather name="bell" size={20} color={colors.textPrimary} />
+              ),
+              onPress: () => router.push("/notifications"),
+            },
+            {
+              icon: (
+                <Feather name="user" size={20} color={colors.textPrimary} />
+              ),
+              onPress: () => router.push("/profile"),
             },
           ]}
         />
 
-        {activeCircle && (
-          <>
-            {/* Active Circle Label */}
-            {/* <View style={styles.circleLabel}>
-              <Text variant="label" color={colors.textTertiary}>
-                Active Circle
-              </Text>
-              <View style={styles.circleBadge}>
-                <MaterialIcons
-                  name="check-circle"
-                  size={16}
-                  color={colors.primary}
-                />
-                <Text
-                  variant="subtitle"
-                  color={colors.primary}
-                  weight="600"
-                  style={{ marginLeft: spacing.xs }}
-                >
-                  {activeCircle.currentMembers}/{activeCircle.memberCapacity}
-                </Text>
-              </View>
-            </View> */}
+        <View style={styles.greetingContainer}>
+          <AjoTypography variant="tab" style={styles.greeting}>
+            {getGreeting()}, {user?.full_name?.split(' ')[0]}
+          </AjoTypography>
+          <AjoTypography variant="bodySmall" color={colors.textSecondary}>
+            What would you like to do today?
+          </AjoTypography>
+        </View>
 
-            {/* Hero Card - Savings Goal */}
-            <Card
-              variant="gradient"
-              padding={spacing.xl}
-              style={styles.heroCard}
+        {/* Journey Card */}
+        <Card variant="default" padding={spacing.lg} style={styles.journeyCard}>
+          <View style={styles.journeyContent}>
+            <View style={styles.journeyText}>
+              <AjoTypography variant="cardTitle" style={styles.journeyTitle}>
+                Start your Ajo journey
+              </AjoTypography>
+              <AjoTypography variant="bodySmall" color={colors.textTertiary}>
+                Create or join a circle and start building your financial future
+                with people you trust.
+              </AjoTypography>
+            </View>
+            <Image
+              source={require("@/assets/images/hero.png")}
+              style={styles.journeyImage}
+            />
+          </View>
+          <View style={styles.journeyActions}>
+            <AjoButton
+              style={[styles.actionButton, styles.primaryAction]}
+              onPress={() => router.push("/circles/create")}
             >
-              <View style={styles.heroHeader}>
-                <View>
-                  <Text
-                    variant="label"
-                    color={colors.textInverted}
-                    style={{ opacity: 0.8 }}
-                  >
-                    {activeCircle.name}
-                  </Text>
-                  <View style={styles.amountContainer}>
-                    <Text
-                      variant="subtitle"
-                      color={colors.textInverted}
-                      style={{ marginTop: spacing.sm }}
-                    >
-                      ₦{savedAmount.toLocaleString()}
-                    </Text>
-                    <Text
-                      variant="subtitle"
-                      color={colors.textInverted}
-                      style={{ opacity: 0.8 }}
-                    >
-                      {" "}
-                      of ₦{goalAmount.toLocaleString()}
-                    </Text>
-                  </View>
-                  {wallet && (
-                    <View style={styles.walletBadge}>
-                      <Text variant="label" color={colors.textInverted}>
-                        Wallet: ₦{wallet.balance.toLocaleString()}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+              <Feather name="users" size={12} color={colors.buttonText} />
+              <AjoTypography variant="buttonSmall" color={colors.buttonText}>
+                Create a circle
+              </AjoTypography>
+            </AjoButton>
+            <AjoButton
+              style={[styles.actionButton, styles.secondaryAction]}
+              onPress={() => router.push("/circles/join")}
+            >
+              <Feather name="link" size={12} color={colors.primary} />
+              <AjoTypography variant="buttonSmall" color={colors.primary}>
+                Join a circle
+              </AjoTypography>
+            </AjoButton>
+          </View>
+        </Card>
 
-                <View style={styles.progressRingContainer}>
-                  <ProgressRing
-                    progress={progress}
-                    size={60}
-                    strokeWidth={3}
-                    color={colors.textInverted}
-                    backgroundColor={colors.textInverted + "30"}
-                    showPercentage={true}
+        {/* Wallet Card */}
+        <Card variant="default" padding={spacing.lg} style={styles.walletCard}>
+          <View style={styles.walletRow}>
+            <View style={styles.walletBalance}>
+              <AjoTypography variant="chip" color={colors.textPrimary}>
+                Wallet balance
+              </AjoTypography>
+              <View style={styles.balanceRow}>
+                <AjoTypography variant="amountHero">
+                  ₦
+                  {showBalance
+                    ? (wallet?.balance || 0).toLocaleString()
+                    : "••••••"}
+                </AjoTypography>
+                <TouchableOpacity
+                  onPress={() => setShowBalance(!showBalance)}
+                  style={styles.eyeButton}
+                >
+                  <Feather
+                    name={showBalance ? "eye" : "eye-off"}
+                    size={16}
+                    color={colors.primary}
                   />
-                </View>
+                </TouchableOpacity>
               </View>
+            </View>
+            <View style={styles.totalSavings}>
+              <AjoTypography variant="chip" color={colors.textTertiary}>
+                Total savings
+              </AjoTypography>
+              <AjoTypography variant="body" color={colors.primary}>
+                ₦{wallet?.total_savings?.toLocaleString() || "0"}
+              </AjoTypography>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.fundWalletCard}
+            onPress={handleFundWallet}
+          >
+            <View style={styles.fundWalletIcon}>
+              <Ionicons name="wallet-outline" size={16} color={colors.primary} />
+            </View>
+            <View style={styles.fundWalletText}>
+              <AjoTypography variant="tab" color={colors.textPrimary}>
+                Add money to your wallet
+              </AjoTypography>
+              <AjoTypography variant="chip" color={colors.textTertiary}>
+                Fund your wallet to start or join a circle.
+              </AjoTypography>
+            </View>
+            <Feather name="arrow-right" size={16} color={colors.textTertiary} />
+          </TouchableOpacity>
+        </Card>
+
+        {/* Quick Actions */}
+        {/* {activeCircle && (
+          <View style={styles.quickActionsContainer}>
+            <View style={styles.quickActions}>
+              
+              <TouchableOpacity
+                style={[styles.quickAction, styles.primaryQuickAction]}
+                onPress={handleContribute}
+              >
+                <Feather
+                  name="plus-circle"
+                  size={20}
+                  color={colors.buttonText}
+                />
+                <AjoTypography
+                  variant="buttonSmall"
+                  color={colors.buttonText}
+                >
+                  Contribute
+                </AjoTypography>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickAction}
+                onPress={handleInvite}
+              >
+                <Feather name="share" size={20} color={colors.textPrimary} />
+                <AjoTypography variant="buttonSmall" color={colors.textPrimary}>
+                  Invite
+                </AjoTypography>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickAction}
+                onPress={handleWithdraw}
+              >
+                <Feather name="arrow-up" size={20} color={colors.textPrimary} />
+                <AjoTypography variant="buttonSmall" color={colors.textPrimary}>
+                  Withdraw
+                </AjoTypography>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )} */}
+
+        {/* Recent Activity */}
+        {activeCircle && (
+          <View style={styles.activitySection}>
+            <AjoTypography variant="monoSmall" style={styles.activityTitle}>
+              Recent Activity
+            </AjoTypography>
+            <Card
+              variant="default"
+              padding={spacing.md}
+              style={styles.activityCard}
+            >
+              {renderRecentActivity()}
             </Card>
-
-            {/* Quick Actions */}
-            <View style={styles.quickActionsContainer}>
-              <View style={styles.quickActions}>
-                <QuickActionButton
-                  icon="add-circle-outline"
-                  label="Contribute"
-                  onPress={handleContribute}
-                />
-                <QuickActionButton
-                  icon="share"
-                  label="Invite"
-                  onPress={handleInvite}
-                />
-                <QuickActionButton
-                  icon="arrow-upward"
-                  label="Withdraw"
-                  onPress={handleWithdraw}
-                />
-
-                {/* <QuickActionButton
-                  icon="more-horiz"
-                  label="More"
-                  onPress={handleMore}
-                /> */}
-              </View>
-            </View>
-
-            {/* Recent Contributions Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text variant="subtitle">Recent Activity</Text>
-                <Pressable>
-                  <Text variant="subtitle" color={colors.primary} weight="600">
-                    View All
-                  </Text>
-                </Pressable>
-              </View>
-
-              <Card variant="default" padding={spacing.lg}>
-                {contributions.length === 0 ? (
-                  <Text
-                    variant="body"
-                    color={colors.textTertiary}
-                    style={{ textAlign: "center", padding: spacing.lg }}
-                  >
-                    No contributions yet
-                  </Text>
-                ) : (
-                  contributions.map((contribution, index) => (
-                    <View key={contribution.id} style={styles.contributionRow}>
-                      <Text variant="body" color={colors.textPrimary}>
-                        ₦{contribution.amount.toLocaleString()}
-                      </Text>
-                      <Text
-                        variant="bodySmall"
-                        color={
-                          contribution.status === "paid"
-                            ? colors.success
-                            : contribution.status === "late"
-                              ? colors.warning
-                              : colors.error
-                        }
-                      >
-                        {contribution.status.toUpperCase()}
-                      </Text>
-                    </View>
-                  ))
-                )}
-              </Card>
-            </View>
-
-            {/* Circle Stats */}
-            <View style={styles.section}>
-              <Text variant="subtitle" style={{ marginBottom: spacing.lg }}>
-                Circle Details
-              </Text>
-              <View style={styles.statsGrid}>
-                <Card
-                  variant="default"
-                  padding={spacing.lg}
-                  style={styles.statCard}
-                >
-                  <Text
-                    variant="label"
-                    color={colors.textTertiary}
-                    style={{ marginBottom: spacing.sm }}
-                  >
-                    Members
-                  </Text>
-                  <Text variant="h2" color={colors.primary}>
-                    {memberCount}
-                  </Text>
-                  <Text variant="bodySmall" color={colors.textTertiary}>
-                    of {activeCircle.member_capacity}
-                  </Text>
-                </Card>
-
-                <Card
-                  variant="default"
-                  padding={spacing.lg}
-                  style={styles.statCard}
-                >
-                  <Text
-                    variant="label"
-                    color={colors.textTertiary}
-                    style={{ marginBottom: spacing.sm }}
-                  >
-                    Per Member
-                  </Text>
-                  <Text variant="h2" color={colors.primary}>
-                    ₦{activeCircle.contribution_amount.toLocaleString()}
-                  </Text>
-                  <Text variant="bodySmall" color={colors.textTertiary}>
-                    per cycle
-                  </Text>
-                </Card>
-              </View>
-            </View>
-          </>
+          </View>
         )}
+
+        {/* Circles List */}
+        {renderCirclesList()}
       </ScrollView>
+
+      <PinModal ref={pinModalRef} />
     </SafeAreaView>
   );
 }
@@ -453,128 +555,266 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-  },
-  emptyContainer: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.xl,
+    backgroundColor: "transparent",
+    paddingHorizontal: 0,
+    height: 56,
   },
-  // Empty state
-  emptyContent: {
-    flex: 1,
-    alignItems: "center",
+  notificationIcon: { position: "relative" },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
     justifyContent: "center",
-    paddingVertical: spacing["3xl"],
+    alignItems: "center",
+    overflow: "hidden",
   },
-  emptyTitle: {
-    marginTop: spacing.xl,
+  avatarImage: { width: 32, height: 32, resizeMode: "cover" },
+  greetingContainer: {
     marginBottom: spacing.md,
-    textAlign: "center",
+    paddingHorizontal: spacing.xs,
   },
-  emptyText: {
-    textAlign: "center",
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
+  greeting: { lineHeight: 28 },
+  // Journey card
+  journeyCard: {
+    marginBottom: spacing.md,
+    backgroundColor: "#FEFEFC",
+    borderWidth: 1,
+    borderColor: "#D7FEE2",
+    borderRadius: 12,
+    overflow: "hidden",
   },
-  exploreButton: {
-    width: "100%",
-    maxWidth: 300,
-  },
-  // Active state
-  circleLabel: {
+  journeyContent: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  circleBadge: {
+  journeyText: { flex: 1, rowGap: spacing.xs },
+  journeyTitle: { lineHeight: 23 },
+  journeyImage: {
+    width: 146,
+    height: 110,
+    borderBottomRightRadius: 50,
+    borderBottomLeftRadius: 24,
+    marginTop: -12,
+    marginRight: -16,
+  },
+  journeyActions: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceSecondary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-  },
-  circleName: {
-    marginBottom: spacing.lg,
-  },
-  heroCard: {
-    marginBottom: spacing.xl,
-  },
-  heroHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
-  amountContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-  },
-  walletBadge: {
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-    backgroundColor: colors.textInverted + "20",
-  },
-  progressRingContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  payoutInfo: {
-    borderTopWidth: 1,
-    borderTopColor: colors.textInverted + "30",
-    paddingTop: spacing.lg,
     gap: spacing.sm,
   },
-  payoutBadge: {
+  actionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.textInverted + "10",
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+  },
+  primaryAction: { backgroundColor: colors.primary },
+  secondaryAction: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: "#BEEECC",
+  },
+  // Wallet card
+  walletCard: {
+    marginBottom: spacing.md,
+    backgroundColor: "#F5FFF7",
+    borderRadius: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#FAFFFA",
+  },
+  walletRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
+  walletBalance: { rowGap: spacing.xs },
+  balanceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  eyeButton: { padding: spacing.xs },
+  totalSavings: { alignItems: "flex-end", rowGap: spacing.xs },
+  fundWalletCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FAFFFA",
+    borderWidth: 0.5,
+    borderColor: "#BFFDCF",
+    borderRadius: 8,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    alignSelf: "flex-start",
+    gap: spacing.sm,
+    shadowColor: "rgba(0,0,0,0.02)",
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 4,
   },
-  quickActionsContainer: {
-    marginBottom: spacing.xl,
+  fundWalletIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 25,
+    backgroundColor: "#D7FEE2",
+    justifyContent: "center",
+    alignItems: "center",
   },
+  fundWalletText: { flex: 1, rowGap: 2 },
+  // Quick actions
+  quickActionsContainer: { marginBottom: spacing.md },
   quickActions: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  section: {
-    marginBottom: spacing.xl,
-  },
-  sectionHeader: {
+  quickAction: {
+    flex: 1,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.lg,
+    justifyContent: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  contributionRow: {
+  primaryQuickAction: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  // Activity
+  activitySection: { marginBottom: spacing.md },
+  activityTitle: { marginBottom: spacing.sm },
+  activityCard: { borderRadius: 12 },
+  activityRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  statsGrid: {
-    flexDirection: "row",
-    gap: spacing.lg,
+  activityIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.sm,
   },
-  statCard: {
+  activityInfo: { flex: 1 },
+  noActivity: { textAlign: "center", paddingVertical: spacing.md },
+  statusBadge: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  // Circles
+  circlesSection: { rowGap: spacing.md },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: spacing.xs,
+  },
+  viewAll: { fontWeight: "600" },
+  circleCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  circleInfo: { flex: 1, rowGap: spacing.xs },
+  circleHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  circleDetails: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  divider: {
+    width: 1,
+    height: 12,
+    backgroundColor: colors.border,
+  },
+  progressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  progressBar: {
     flex: 1,
+    height: 4,
+    backgroundColor: colors.surface,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+  },
+  // Empty state
+  emptyStateContainer: { rowGap: spacing.lg },
+  emptyCard: {
+    alignItems: "center",
+    rowGap: spacing.sm,
+    borderWidth: 0.5,
+    borderColor: "#E6FEED",
+    borderRadius: 12,
+  },
+  emptyIconContainer: {
+    width: 36,
+    height: 36,
+    backgroundColor: "#E8EDE9",
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyTitle: { textAlign: "center" },
+  emptySubtitle: { textAlign: "center" },
+  emptyAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  howAjoCard: {
+    backgroundColor: "#FAFFFA",
+    borderWidth: 0.5,
+    borderColor: "#BFFDCF",
+    borderRadius: 12,
+    shadowColor: "rgba(0,0,0,0.02)",
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 4,
+  },
+  howAjoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  howAjoIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 25,
+    backgroundColor: "#D7FEE2",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  howAjoText: { flex: 1, rowGap: 2 },
+  howAjoAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
   },
 });

@@ -3,7 +3,7 @@
  * First impression, entry point to sign up or log in
  */
 
-import { Button } from "@/components/ui/Button";
+import AjoButton  from "@/components/ui/AjoButton";
 import { Text } from "@/components/ui/Text";
 import { useAuth } from "@/contexts/AuthContext";
 import { colors } from "@/theme/colors";
@@ -58,19 +58,15 @@ export default function LandingScreen() {
 
         {/* Action Buttons */}
         <View style={styles.buttons}>
-          <Button
-            label="Get Started"
+          <AjoButton
+            title="Get Started"
             variant="primary"
-            size="lg"
-            fullWidth
             style={styles.button}
             onPress={() => router.push("/auth/signup")}
           />
-          <Button
-            label="Log In"
-            variant="outlined"
-            size="lg"
-            fullWidth
+          <AjoButton
+            title="Log In"
+            variant="outline"
             style={styles.button}
             onPress={() => router.push("/auth/login")}
           />

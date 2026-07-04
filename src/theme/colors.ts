@@ -10,6 +10,7 @@ export const colors = {
   // Backgrounds – mostly whites and light grays from palette
   background: "#FFFFFF",
   surface: "#F5F5F5",               // palette: #F5F5F5
+  surfacePrimary: "#FDFCFC",        // palette: #FDFCFC
   surfaceSecondary: "#EDEDED",      // palette: #EDEDED
   surfaceTertiary: "#E3E3E3",       // palette: #E3E3E3
   surfaceGray: "#F2F2F2",           // palette: #F2F2F2
@@ -20,7 +21,7 @@ export const colors = {
   textSecondary: "#81848F",         // mid gray (palette: #81848F)
   textTertiary: "#999999",          // light gray (palette: #999999)
   textInverted: "#FFFFFF",          // white
-
+  buttonText: "#87FA89",            // primary (palette: #144D24)
   // Borders & Dividers – from palette grays
   border: "#CFCFCF",                // palette: #CFCFCF
   divider: "#E6E6E6",               // palette: #E6E6E6

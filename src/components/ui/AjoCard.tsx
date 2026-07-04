@@ -1,8 +1,3 @@
-/**
- * àjó Card Component
- * Flat design - borders instead of shadows
- */
-
 import { colors, radius, spacing } from "@/theme";
 import { StyleSheet, View, ViewProps, ViewStyle } from "react-native";
 
@@ -16,7 +11,7 @@ interface AjoCardProps extends ViewProps {
 
 export function AjoCard({
   variant = "default",
-  padding = spacing[6],
+  padding = spacing[4],
   style,
   children,
   ...props
@@ -41,10 +36,10 @@ export function AjoCard({
 
 const styles = StyleSheet.create({
   defaultCard: {
-    backgroundColor: colors.canvas,
-    borderRadius: radius.lg,
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.divider,
+    borderColor: colors.successTint,
   },
   elevatedCard: {
     backgroundColor: colors.canvas,

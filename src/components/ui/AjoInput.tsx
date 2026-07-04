@@ -1,3 +1,5 @@
+// components/ui/AjoInput.tsx
+import { colors } from '@/theme/colors';
 import React, { useState } from 'react';
 import {
   View,
@@ -9,34 +11,20 @@ import {
   TextStyle,
   TextInputProps,
 } from 'react-native';
-import { Svg, Path } from 'react-native-svg';
 
 export interface AjoInputProps extends Omit<TextInputProps, 'style'> {
-  /** Label text displayed above the input */
   label?: string;
-  /** Whether the field is required (adds a red asterisk) */
   required?: boolean;
-  /** Placeholder text */
   placeholder?: string;
-  /** Current value */
   value?: string;
-  /** Callback when text changes */
   onChangeText?: (text: string) => void;
-  /** Error message to display below the input */
   error?: string;
-  /** Custom left icon component (defaults to profile SVG) */
   leftIcon?: React.ReactNode;
-  /** Whether to show the left icon (defaults to true) */
   showLeftIcon?: boolean;
-  /** Override container style */
   containerStyle?: StyleProp<ViewStyle>;
-  /** Override input wrapper style (the bordered box) */
   inputWrapperStyle?: StyleProp<ViewStyle>;
-  /** Override label style */
   labelStyle?: StyleProp<TextStyle>;
-  /** Override input text style */
   inputStyle?: StyleProp<TextStyle>;
-  /** Override error text style */
   errorStyle?: StyleProp<TextStyle>;
 }
 
@@ -61,37 +49,17 @@ const AjoInput: React.FC<AjoInputProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
-  // Default left icon (profile SVG)
-  const defaultIcon = (
-    <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <Path
-        d="M10.1331 9.05817C10.0498 9.04984 9.9498 9.04984 9.85814 9.05817C7.8748 8.9915 6.2998 7.3665 6.2998 5.3665C6.2998 3.32484 7.9498 1.6665 9.9998 1.6665C12.0415 1.6665 13.6998 3.32484 13.6998 5.3665C13.6915 7.3665 12.1165 8.9915 10.1331 9.05817Z"
-        stroke="#9AAC9F"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M5.9666 12.1335C3.94993 13.4835 3.94993 15.6835 5.9666 17.0252C8.25827 18.5585 12.0166 18.5585 14.3083 17.0252C16.3249 15.6752 16.3249 13.4752 14.3083 12.1335C12.0249 10.6085 8.2666 10.6085 5.9666 12.1335Z"
-        stroke="#9AAC9F"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-
   const renderLeftIcon = () => {
     if (!showLeftIcon) return null;
-    return leftIcon || defaultIcon;
+    return leftIcon;
   };
 
   // Determine border color based on error and focus
-  let borderColor = 'rgba(207, 207, 207, 1)';
+  let borderColor = colors.border;
   if (error) {
-    borderColor = 'rgba(253, 78, 97, 1)'; // error red
+    borderColor = colors.error;
   } else if (isFocused) {
-    borderColor = 'rgba(3, 117, 35, 1)'; // primary green
+    borderColor = colors.primary;
   }
 
   return (
@@ -112,7 +80,7 @@ const AjoInput: React.FC<AjoInputProps> = ({
           !editable && styles.inputDisabled,
         ]}
       >
-        <View style={styles.leftIconContainer}>{renderLeftIcon()}</View>
+        {renderLeftIcon() && <View style={styles.leftIconContainer}>{renderLeftIcon()}</View>}
         <TextInput
           style={[styles.input, inputStyle, !editable && styles.inputDisabled]}
           placeholder={placeholder}
@@ -135,8 +103,6 @@ const AjoInput: React.FC<AjoInputProps> = ({
 const styles = StyleSheet.create({
   container: {
     alignSelf: 'stretch',
-    flexShrink: 0,
-    display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
     rowGap: 4,
@@ -147,33 +113,28 @@ const styles = StyleSheet.create({
   },
   label: {
     textAlign: 'left',
-    color: 'rgba(1, 35, 10, 1)',
+    color: colors.textPrimary,
     fontFamily: 'Poppins',
-    fontSize: 10.819672584533691,
+    fontSize: 10,
     fontWeight: '500',
-    lineHeight: 16.229507446289062,
+    lineHeight: 16,
   },
   requiredStar: {
-    color: 'rgba(253, 78, 97, 1)',
-    fontSize: 10.819672584533691,
+    color: colors.error,
+    fontSize: 10,
     fontWeight: '500',
   },
   inputWrapper: {
-    position: 'relative',
-    alignSelf: 'stretch',
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
-    borderStyle: 'solid',
-    display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
-    columnGap: 4,
-    padding: 8,
     borderWidth: 1,
-    borderColor: 'rgba(207, 207, 207, 1)',
+    borderColor: colors.border,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
+    paddingHorizontal: 8,
+    paddingVertical: 0,
+    minHeight: 48, // fixed minimum height to prevent collapse
+    width: '100%',
   },
   leftIconContainer: {
     flexShrink: 0,
@@ -181,23 +142,26 @@ const styles = StyleSheet.create({
     width: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 4,
   },
   input: {
     flex: 1,
+    height: 48, // explicit height to ensure it always has size
     textAlign: 'left',
-    color: 'rgba(1, 35, 10, 1)',
+    color: colors.textPrimary,
     fontFamily: 'Poppins',
     fontSize: 10.819672584533691,
     fontWeight: '400',
     lineHeight: 16.229507446289062,
     paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   inputDisabled: {
     opacity: 0.6,
   },
   errorText: {
     textAlign: 'left',
-    color: 'rgba(253, 78, 61, 1)',
+    color: colors.error,
     fontFamily: 'Poppins',
     fontSize: 10,
     fontWeight: '400',

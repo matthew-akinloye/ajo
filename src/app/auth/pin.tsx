@@ -1,57 +1,50 @@
-/**
- * àjó PIN Setup/Entry Screen
- * Based on index.tsx blueprint - typography-first, minimal design
- */
-
-import { Card } from "@/components/ui/Card";
-import { Text } from "@/components/ui/Text";
+import AjoButton from "@/components/ui/AjoButton";
+import AjoInput from "@/components/ui/AjoInput";
 import { colors } from "@/theme/colors";
-import { radius, spacing } from "@/theme/spacing";
+import { spacing } from "@/theme/spacing";
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
+  ScrollView,
   StyleSheet,
-  TextInput,
+  Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 interface PinScreenProps {
+  /** Mode of the PIN screen */
   mode?: "setup" | "confirm" | "enter";
+  /** Callback when PIN is successfully entered/created */
   onPinComplete?: (pin: string) => void;
+  /** Title override */
+  title?: string;
+  /** Subtitle override */
+  subtitle?: string;
 }
 
 export default function PinScreen({
   mode = "enter",
   onPinComplete,
+  title,
+  subtitle,
 }: PinScreenProps) {
   const router = useRouter();
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handlePinSubmit = () => {
-    if (pin.length !== 4) {
-      setError("PIN must be 4 digits");
-      return;
-    }
+  // Determine if we need confirmation fields
+  const isSetupMode = mode === "setup" || mode === "confirm";
 
-    if (mode === "confirm" && pin !== confirmPin) {
-      setError("PINs do not match");
-      return;
-    }
-
-    if (onPinComplete) {
-      onPinComplete(pin);
-    } else {
-      router.back();
-    }
-  };
-
+  // Get title and subtitle based on mode
   const getTitle = () => {
+    if (title) return title;
     switch (mode) {
       case "setup":
         return "Create PIN";
@@ -62,14 +55,43 @@ export default function PinScreen({
     }
   };
 
-  const getDescription = () => {
+  const getSubtitle = () => {
+    if (subtitle) return subtitle;
     switch (mode) {
       case "setup":
-        return "Create a 4-digit PIN to secure your account";
+        return "Create a 4‑digit PIN to secure your account";
       case "confirm":
-        return "Re-enter your PIN to confirm";
+        return "Re‑enter your PIN to confirm";
       default:
         return "Enter your PIN to continue";
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Validation
+    if (pin.length !== 4) {
+      setError("PIN must be 4 digits");
+      return;
+    }
+
+    if (isSetupMode && pin !== confirmPin) {
+      setError("PINs do not match");
+      return;
+    }
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      if (onPinComplete) {
+        await onPinComplete(pin);
+      } else {
+        router.back();
+      }
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,65 +101,70 @@ export default function PinScreen({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
-        <View style={styles.content}>
-          <Card variant="default" padding={spacing.xl} style={styles.card}>
-            <Text variant="h2" style={styles.title}>
-              {getTitle()}
-            </Text>
-            <Text
-              variant="label"
-              color={colors.textTertiary}
-              style={styles.subtitle}
-            >
-              {getDescription()}
-            </Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Back Arrow */}
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color="#000" />
+          </TouchableOpacity>
 
-            <View style={styles.pinSection}>
-              <TextInput
-                style={styles.pinInput}
-                placeholder="••••"
-                placeholderTextColor={colors.textTertiary}
-                value={pin}
-                onChangeText={setPin}
-                keyboardType="number-pad"
-                maxLength={4}
+          {/* Header */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>{getTitle()}</Text>
+            <Text style={styles.subtitle}>{getSubtitle()}</Text>
+          </View>
+
+          {/* Form Fields */}
+          <View style={styles.formContainer}>
+            {/* PIN Input */}
+            <AjoInput
+              label="PIN"
+              placeholder="****"
+              value={pin}
+              onChangeText={setPin}
+              leftIcon={<Feather name="lock" size={20} color="#666" />}
+              secureTextEntry
+              maxLength={4}
+              keyboardType="number-pad"
+              containerStyle={styles.inputContainer}
+            />
+
+            {/* Confirm PIN (only in setup mode) */}
+            {isSetupMode && (
+              <AjoInput
+                label="Confirm PIN"
+                placeholder="****"
+                value={confirmPin}
+                onChangeText={setConfirmPin}
+                leftIcon={<Feather name="check" size={20} color="#666" />}
                 secureTextEntry
-                textAlign="center"
+                maxLength={4}
+                keyboardType="number-pad"
+                containerStyle={styles.inputContainer}
               />
+            )}
 
-              {mode === "confirm" && (
-                <TextInput
-                  style={styles.pinInput}
-                  placeholder="Confirm PIN"
-                  placeholderTextColor={colors.textTertiary}
-                  value={confirmPin}
-                  onChangeText={setConfirmPin}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  secureTextEntry
-                  textAlign="center"
-                />
-              )}
+            {/* Error Message */}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-              {error && (
-                <Text variant="label" color={colors.error} style={styles.error}>
-                  {error}
-                </Text>
-              )}
-            </View>
-
-            <Pressable style={styles.button} onPress={handlePinSubmit}>
-              <Text variant="label" color={colors.textInverted} weight="600">
-                Continue
-              </Text>
-            </Pressable>
-          </Card>
-        </View>
+            {/* Submit Button */}
+            <AjoButton
+              title={isLoading ? "Processing..." : "Continue"}
+              onPress={handleSubmit}
+              loading={isLoading}
+              disabled={isLoading}
+              style={styles.button}
+            />
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
+// ---------- Styles (matching Login/Signup) ----------
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -146,44 +173,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    padding: spacing.lg,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
   },
-  card: {
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  headerContainer: {
     alignItems: "center",
+    marginBottom: 32,
   },
   title: {
-    marginBottom: spacing.sm,
+    fontFamily: "Poppins",
+    fontSize: 24,
+    fontWeight: "500",
+    color: colors.textPrimary,
+    lineHeight: 28,
     textAlign: "center",
   },
   subtitle: {
-    marginBottom: spacing.xl,
+    fontFamily: "Inter",
+    fontSize: 12,
+    fontWeight: "400",
+    color: colors.textSecondary,
+    lineHeight: 16,
     textAlign: "center",
+    marginTop: 4,
   },
-  pinSection: {
+  formContainer: {
     width: "100%",
-    gap: spacing.md,
-    marginBottom: spacing.xl,
   },
-  pinInput: {
-    height: 56,
-    fontSize: 32,
-    letterSpacing: 8,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    color: colors.textPrimary,
+  inputContainer: {
+    marginBottom: 20,
   },
-  error: {
+  errorText: {
+    fontFamily: "Inter",
+    fontSize: 12,
+    color: colors.error,
     textAlign: "center",
+    marginBottom: 16,
   },
   button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.lg,
-    alignItems: "center",
-    width: "100%",
+    marginBottom: 16,
   },
 });

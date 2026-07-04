@@ -58,7 +58,7 @@ export interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({
-  title = "Sentri",
+  title = "",
   titleStyle,
   leftIcon,
   onLeftPress,
@@ -215,13 +215,13 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <View style={headerStyles}>
-      {typeof title === "string" ? (
-        <Text style={[styles.glassText, titleStyle]}>{title}</Text>
+      {title === "" ? (
+        <View>{renderLeft()}</View>
       ) : (
-        title
+        <Text style={[styles.glassText, titleStyle]}>{title}</Text>
       )}
       <View style={styles.rightContainer}>
-        {renderLeft()}
+       
         {renderRight()}
       </View>
     </View>
