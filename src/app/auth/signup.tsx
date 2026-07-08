@@ -57,7 +57,7 @@ export default function SignupScreen() {
         email: null,
         pin,
       });
-      router.replace("/(tabs)");
+      router.replace("/guide");
     } catch (err: any) {
       setError(err.message || "Signup failed. Please try again.");
     } finally {

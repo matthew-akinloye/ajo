@@ -177,8 +177,8 @@ export default function guideScreen() {
           {/* Bottom actions */}
           <View style={styles.bottomActions}>
             <AjoButton
-              title="Get Started"
-              onPress={() => router.push("/auth/signup")}
+              title="Skip"
+              onPress={() => router.push("/(tabs)")}
               style={styles.getStartedButton}
             />
 

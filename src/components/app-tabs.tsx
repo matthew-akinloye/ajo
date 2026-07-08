@@ -20,7 +20,7 @@ export default function AppTabs() {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="circles/index">
+      <NativeTabs.Trigger name="circles">
         <NativeTabs.Trigger.Label>Circles</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           src={require("@/assets/images/tabIcons/circles.png")}

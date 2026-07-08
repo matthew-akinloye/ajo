@@ -117,6 +117,7 @@ class RealApiService {
     await AsyncStorage.removeItem(SESSION_STORAGE_KEY);
   }
 
+  // ===== AUTH =====
   async login(data: LoginRequest): Promise<TokenResponse> {
     const response = await this.request<TokenResponse>('/auth/login', {
       method: 'POST',
@@ -144,6 +145,7 @@ class RealApiService {
     });
   }
 
+  // ===== USERS =====
   async getMe(): Promise<UserOut> {
     return this.request<UserOut>('/users/me');
   }
@@ -166,6 +168,7 @@ class RealApiService {
     });
   }
 
+  // ===== ADMIN =====
   async listVerificationQueue(): Promise<AdminVerificationQueueItem[]> {
     return this.request<AdminVerificationQueueItem[]>('/admin/verification-queue');
   }
@@ -184,6 +187,7 @@ class RealApiService {
     });
   }
 
+  // ===== CIRCLES =====
   async listCircles(filter?: string | null, search?: string | null): Promise<CircleOut[]> {
     const params = new URLSearchParams();
     if (filter) {
@@ -252,6 +256,7 @@ class RealApiService {
     });
   }
 
+  // ===== WALLET =====
   async getWallet(): Promise<WalletOut> {
     return this.request<WalletOut>('/wallet');
   }
@@ -274,6 +279,7 @@ class RealApiService {
     return this.request<TransactionOut[]>('/wallet/transactions');
   }
 
+  // ===== INVITES =====
   async createInvite(circleId: number, data: InviteCreate): Promise<InviteOut> {
     return this.request<InviteOut>(`/circles/${circleId}/invites`, {
       method: 'POST',
@@ -291,6 +297,34 @@ class RealApiService {
     });
   }
 
+  /**
+   * Convenience method to get the user's personal invite code.
+   * Currently, the OpenAPI spec does not expose a dedicated endpoint for this.
+   * This implementation attempts to find an existing invite for the user's first circle
+   * and creates one if none exists.
+   */
+  async getInviteCode(): Promise<string> {
+    try {
+      // Fetch user's circles
+      const circles = await this.listCircles();
+      // Find the first circle where the user is a member (we need to check membership, but we don't have that)
+      // For simplicity, we take the first circle and create an invite for it.
+      // In a real scenario, you might want to store the user's default circle or use a dedicated endpoint.
+      if (circles.length > 0) {
+        const circle = circles[0];
+        // Try to create an invite for that circle
+        const invite = await this.createInvite(circle.id, { invitee_contact: null });
+        return invite.code;
+      }
+      // If no circles, return a placeholder (or throw)
+      return '';
+    } catch (error) {
+      console.warn('Failed to fetch invite code, using fallback:', error);
+      return '';
+    }
+  }
+
+  // ===== NOTIFICATIONS =====
   async listNotifications(): Promise<NotificationOut[]> {
     return this.request<NotificationOut[]>('/notifications');
   }

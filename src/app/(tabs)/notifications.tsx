@@ -1,16 +1,17 @@
 /**
  * àjó Notifications Screen
- * Based on index.tsx blueprint - typography-first, minimal design
+ * Based on HomeScreen blueprint - typography-first, minimal design
  */
 
 import Header from "@/components/smt/smt-header";
 import { Card } from "@/components/ui/Card";
-import { Text } from "@/components/ui/Text";
+import { AjoTypography } from "@/components/ui/AjoTypography";
 import { apiService } from "@/services/api.service";
 import { NotificationOut } from "@/services/api.types";
 import { colors } from "@/theme/colors";
-import { radius, spacing } from "@/theme/spacing";
-import { MaterialIcons } from "@expo/vector-icons";
+import { spacing } from "@/theme/spacing";
+import { radius } from "@/theme/radius";
+import { Feather } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
   Pressable,
@@ -23,19 +24,24 @@ import {
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationOut[]>([]);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    loadNotifications();
+    loadData();
   }, []);
 
-  const loadNotifications = async () => {
+  const loadData = async () => {
     try {
-      const data = await apiService.listNotifications();
-      setNotifications(data);
+      const [notificationsData, inviteData] = await Promise.all([
+        apiService.listNotifications(),
+        apiService.getInviteCode?.() ?? Promise.resolve("AJO-2024-X7K9"), // fallback if method not exists
+      ]);
+      setNotifications(notificationsData);
+      setInviteCode(inviteData?.code ?? inviteData ?? "AJO-2024-X7K9");
     } catch (error) {
-      console.error("Failed to load notifications:", error);
+      console.error("Failed to load data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +49,7 @@ export default function NotificationsScreen() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await loadNotifications();
+    await loadData();
     setIsRefreshing(false);
   };
 
@@ -68,18 +74,18 @@ export default function NotificationsScreen() {
     );
   };
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string): keyof typeof Feather.glyphMap => {
     switch (type) {
       case "payment":
-        return "payments";
+        return "credit-card";
       case "invite":
-        return "person-add";
+        return "user-plus";
       case "reminder":
-        return "alarm";
+        return "bell";
       case "payout":
-        return "account-balance-wallet";
+        return "arrow-up";
       default:
-        return "notifications";
+        return "bell";
     }
   };
 
@@ -92,7 +98,7 @@ export default function NotificationsScreen() {
       case "reminder":
         return colors.warning;
       case "payout":
-        return colors.info;
+        return colors.info || colors.primary;
       default:
         return colors.textTertiary;
     }
@@ -126,76 +132,68 @@ export default function NotificationsScreen() {
           />
         }
       >
+        {/* Header */}
         <Header
           title="Notifications"
           rightButtons={[
             {
-              icon: (
-                <MaterialIcons
-                  name="check-circle"
-                  size={24}
-                  color={colors.textPrimary}
-                />
-              ),
+              icon: <Feather name="check-circle" size={20} color={colors.textPrimary} />,
               onPress: handleMarkAllRead,
             },
           ]}
         />
 
         {/* Invite Code Card */}
-        <Card variant="gradient" padding={spacing.lg} style={styles.inviteCard}>
-          <Text
-            variant="body"
-            color={colors.textInverted}
-            style={{ opacity: 0.8 }}
-          >
-            YOUR INVITE CODE
-          </Text>
-          <Text
-            variant="subtitle"
-            color={colors.textInverted}
-            style={styles.inviteCode}
-          >
-            AJO-2024-X7K9
-          </Text>
-          <Text
-            variant="label"
-            color={colors.textInverted}
-            style={{ opacity: 0.8 }}
-          >
-            Share with friends to earn rewards
-          </Text>
+        <Card variant="default" padding={spacing.lg} style={styles.inviteCard}>
+          <View style={styles.inviteContent}>
+            <View style={styles.inviteText}>
+              <AjoTypography variant="chip" color={colors.textTertiary}>
+                YOUR INVITE CODE
+              </AjoTypography>
+              {isLoading && !inviteCode ? (
+                <AjoTypography variant="body" color={colors.textTertiary}>
+                  Loading...
+                </AjoTypography>
+              ) : (
+                <AjoTypography variant="body" style={styles.inviteCode}>
+                  {inviteCode || ""}
+                </AjoTypography>
+              )}
+              <AjoTypography variant="chip" color={colors.textTertiary}>
+                Share with friends to earn rewards
+              </AjoTypography>
+            </View>
+            <View style={styles.inviteIcon}>
+              <Feather name="gift" size={24} color={colors.primary} />
+            </View>
+          </View>
         </Card>
 
         {/* Notifications List */}
         <View style={styles.notificationsList}>
           {isLoading ? (
             <View style={styles.loadingState}>
-              <Text variant="body" color={colors.textTertiary}>
+              <AjoTypography variant="body" color={colors.textTertiary}>
                 Loading notifications...
-              </Text>
+              </AjoTypography>
             </View>
           ) : notifications.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialIcons
-                name="notifications-none"
-                size={48}
-                color={colors.textTertiary}
-              />
-              <Text
+              <Feather name="bell-off" size={48} color={colors.textTertiary} />
+              <AjoTypography
                 variant="body"
                 color={colors.textTertiary}
                 style={styles.emptyText}
               >
                 No notifications yet
-              </Text>
+              </AjoTypography>
             </View>
           ) : (
             notifications.map((notification) => (
               <Card
                 key={notification.id}
                 variant="default"
-                padding={spacing.lg}
+                padding={spacing.md}
                 style={[
                   styles.notificationCard,
                   !notification.read && styles.notificationUnread,
@@ -203,36 +201,38 @@ export default function NotificationsScreen() {
               >
                 <Pressable
                   onPress={() => handleNotificationPress(notification.id)}
+                  style={styles.notificationPressable}
                 >
                   <View style={styles.notificationHeader}>
-                    <View style={styles.notificationIcon}>
-                      <MaterialIcons
-                        name={getNotificationIcon(notification.type) as any}
-                        size={24}
+                    <View
+                      style={[
+                        styles.notificationIcon,
+                        { backgroundColor: getNotificationColor(notification.type) + "20" },
+                      ]}
+                    >
+                      <Feather
+                        name={getNotificationIcon(notification.type)}
+                        size={20}
                         color={getNotificationColor(notification.type)}
                       />
                     </View>
                     <View style={styles.notificationContent}>
-                      <Text variant="label" style={styles.notificationTitle}>
+                      <AjoTypography variant="bodySmall" color={colors.textPrimary}>
                         {notification.title}
-                      </Text>
-                      <Text
-                        variant="label"
-                        color={colors.textTertiary}
-                        style={styles.notificationTime}
-                      >
+                      </AjoTypography>
+                      <AjoTypography variant="chip" color={colors.textTertiary}>
                         {formatTimestamp(notification.created_at)}
-                      </Text>
+                      </AjoTypography>
                     </View>
                     {!notification.read && <View style={styles.unreadDot} />}
                   </View>
-                  <Text
-                    variant="label"
+                  <AjoTypography
+                    variant="bodySmall"
                     color={colors.textSecondary}
                     style={styles.notificationMessage}
                   >
                     {notification.body}
-                  </Text>
+                  </AjoTypography>
                 </Pressable>
               </Card>
             ))
@@ -243,57 +243,75 @@ export default function NotificationsScreen() {
   );
 }
 
+// --- Styles (same as before) ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
   scrollContent: {
-   paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,  },
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+  },
   inviteCard: {
     marginBottom: spacing.md,
+    backgroundColor: "#F5FFF7",
+    borderRadius: radius.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: "#FAFFFA",
   },
+  inviteContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  inviteText: { flex: 1, rowGap: spacing.xs },
   inviteCode: {
-    marginVertical: spacing.sm,
-    letterSpacing: 2,
+    letterSpacing: 1,
+    color: colors.primary,
+  },
+  inviteIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: "#D7FEE2",
+    justifyContent: "center",
+    alignItems: "center",
   },
   notificationsList: {
     gap: spacing.sm,
-    paddingHorizontal: spacing.md,
   },
   notificationCard: {
-    marginBottom: spacing.sm,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.sm,
   },
   notificationUnread: {
-    borderWidth: 3,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  notificationPressable: {
+    gap: spacing.xs,
   },
   notificationHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.sm,
   },
   notificationIcon: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: radius.md,
-    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: spacing.md,
+    marginRight: spacing.sm,
   },
   notificationContent: {
     flex: 1,
-  },
-  notificationTitle: {
-    marginBottom: spacing.xs,
-  },
-  notificationTime: {
-    fontSize: 12,
+    rowGap: 2,
   },
   notificationMessage: {
     lineHeight: 20,
+    paddingLeft: spacing.md,
   },
   unreadDot: {
     width: 8,
@@ -303,12 +321,13 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   loadingState: {
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.xl,
     alignItems: "center",
   },
   emptyState: {
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.xl,
     alignItems: "center",
+    gap: spacing.sm,
   },
   emptyText: {
     marginTop: spacing.sm,

@@ -3,21 +3,21 @@ import AjoButton from "@/components/ui/AjoButton";
 import { AjoCard } from "@/components/ui/AjoCard";
 import AjoInput from "@/components/ui/AjoInput";
 import { AjoTypography } from "@/components/ui/AjoTypography";
-import { useAuth } from "@/contexts/AuthContext";
+import ReusableBottomSheet, { ReusableBottomSheetRef } from "@/components/smt/smt-bottom-sheet";
 import { apiService } from "@/services/api.service";
 import { colors } from "@/theme/colors";
 import { spacing } from "@/theme/spacing";
+import { radius } from "@/theme/radius";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 type Step = 1 | 2 | 3;
 
@@ -27,50 +27,49 @@ interface CreateCircleModalProps {
 
 export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
   const router = useRouter();
-  const { user } = useAuth();
   const [step, setStep] = useState<Step>(1);
 
   // Form state
   const [name, setName] = useState("");
   const [circleType, setCircleType] = useState<"private" | "public">("private");
   const [amount, setAmount] = useState("");
-  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly">(
-    "weekly",
-  );
+  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly">("weekly");
   const [memberCapacity, setMemberCapacity] = useState("5");
-  const [payoutOrder, setPayoutOrder] = useState<"random" | "sequential">(
-    "random",
-  );
+  const [payoutOrder, setPayoutOrder] = useState<"random" | "sequential">("random");
   const [openJoin, setOpenJoin] = useState(true);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdCircle, setCreatedCircle] = useState<any>(null);
 
-  const handleClose = () => {
-    // If we're not in the middle of submission, close
-    if (!isSubmitting) {
-      onClose();
-    }
+  // Bottom sheet refs
+  const messageSheetRef = useRef<ReusableBottomSheetRef>(null);
+
+  // Message state
+  const [messageData, setMessageData] = useState<{
+    title: string;
+    message: string;
+    isSuccess: boolean;
+    onOk?: () => void;
+  }>({ title: "", message: "", isSuccess: false });
+
+  const showMessage = (title: string, message: string, isSuccess: boolean, onOk?: () => void) => {
+    setMessageData({ title, message, isSuccess, onOk });
+    messageSheetRef.current?.snapToIndex(0);
   };
-  const validateStep1 = () => {
+
+  // Validation
+  const validateStep1 = (): boolean => {
     if (!name.trim()) {
-      Alert.alert("Missing field", "Please enter a circle name.");
+      showMessage("Missing Field", "Please enter a circle name.", false);
       return false;
     }
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) {
-      Alert.alert(
-        "Invalid amount",
-        "Contribution amount must be greater than 0.",
-      );
+      showMessage("Invalid Amount", "Contribution amount must be greater than 0.", false);
       return false;
     }
     const cap = parseInt(memberCapacity);
     if (isNaN(cap) || cap < 2 || cap > 50) {
-      Alert.alert(
-        "Invalid capacity",
-        "Member capacity must be between 2 and 50.",
-      );
+      showMessage("Invalid Capacity", "Member capacity must be between 2 and 50.", false);
       return false;
     }
     return true;
@@ -99,95 +98,127 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
       setCreatedCircle(created);
       setStep(3);
     } catch (error) {
-      Alert.alert(
+      showMessage(
         "Error",
         error instanceof Error ? error.message : "Failed to create circle.",
+        false
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleClose = () => {
+    onClose();
+  };
+
+  const goToCircle = () => {
+    if (createdCircle) {
+      router.push(`/(tabs)/circle/${createdCircle.id}`);
+    } else {
+      onClose();
+    }
+  };
+
+  // Step Indicator
+  const StepIndicator = () => (
+    <View style={styles.stepIndicator}>
+      {[1, 2, 3].map((s) => (
+        <View key={s} style={styles.stepDotContainer}>
+          <View
+            style={[
+              styles.stepDot,
+              s === step && styles.stepDotActive,
+              s < step && styles.stepDotCompleted,
+            ]}
+          >
+            {s < step ? (
+              <Feather name="check" size={12} color={colors.textInverted} />
+            ) : (
+              <AjoTypography
+                variant="chip"
+                color={s === step ? colors.textInverted : colors.textTertiary}
+                style={styles.stepDotText}
+              >
+                {s}
+              </AjoTypography>
+            )}
+          </View>
+          {s < 3 && (
+            <View
+              style={[
+                styles.stepLine,
+                s < step && styles.stepLineCompleted,
+              ]}
+            />
+          )}
+        </View>
+      ))}
+    </View>
+  );
+
+  // Step content (same as before)
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
       <View style={styles.sectionHeader}>
         <AjoTypography variant="sectionHeader" style={styles.sectionTitle}>
-          Create a circle
+          Circle Details
         </AjoTypography>
         <AjoTypography variant="bodySmall" color={colors.textSecondary}>
-          Set up your savings circle.
-          {"\n"}
-          You can change settings later.
+          Set up your savings circle. You can change settings later.
         </AjoTypography>
       </View>
 
       <View style={styles.formGroup}>
-        <AjoCard>
+        <AjoCard padding={spacing.md} style={styles.formCard}>
           <AjoInput
             label="Circle name"
             placeholder="e.g., Family Savings"
             value={name}
             onChangeText={setName}
-            leftIcon={
-              <Feather name="users" size={20} color={colors.textTertiary} />
-            }
+            leftIcon={<Feather name="users" size={20} color={colors.textTertiary} />}
             containerStyle={styles.input}
           />
         </AjoCard>
 
-        <AjoCard>
-          <View style={styles.radioGroup}>
-            <AjoTypography variant="label" style={styles.radioLabel}>
-              Circle type
-            </AjoTypography>
-            <View style={styles.radioRow}>
-              {["private", "public"].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.radioOption,
-                    circleType === type && styles.radioOptionActive,
-                  ]}
-                  onPress={() => setCircleType(type as any)}
-                >
-                  <View style={styles.radioCircle}>
-                    {circleType === type && (
-                      <View style={styles.radioCircleSelected} />
-                    )}
-                  </View>
-                  <View>
-                    <AjoTypography
-                      variant="bodySmall"
-                      color={colors.textPrimary}
-                    >
-                      {type === "private" ? "Private" : "Public"}
-                    </AjoTypography>
-                    <AjoTypography variant="chip" color={colors.textTertiary}>
-                      {type === "private"
-                        ? "People you invite"
-                        : "Open to community"}
-                    </AjoTypography>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+        <AjoCard padding={spacing.md} style={styles.formCard}>
+          <AjoTypography variant="label" style={styles.fieldLabel}>
+            Circle type
+          </AjoTypography>
+          <View style={styles.radioRow}>
+            {["private", "public"].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.radioOption,
+                  circleType === type && styles.radioOptionActive,
+                ]}
+                onPress={() => setCircleType(type as any)}
+              >
+                <View style={styles.radioCircle}>
+                  {circleType === type && <View style={styles.radioCircleSelected} />}
+                </View>
+                <View style={styles.radioText}>
+                  <AjoTypography variant="bodySmall" color={colors.textPrimary}>
+                    {type === "private" ? "Private" : "Public"}
+                  </AjoTypography>
+                  <AjoTypography variant="chip" color={colors.textTertiary}>
+                    {type === "private" ? "People you invite" : "Open to community"}
+                  </AjoTypography>
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
         </AjoCard>
 
-        <AjoCard>
+        <AjoCard padding={spacing.md} style={styles.formCard}>
           <AjoInput
             label="Contribution amount"
             placeholder="0.00"
             value={amount}
             onChangeText={setAmount}
             keyboardType="numeric"
-            leftIcon={
-              <Feather
-                name="dollar-sign"
-                size={20}
-                color={colors.textTertiary}
-              />
-            }
+            leftIcon={<Feather name="dollar-sign" size={20} color={colors.textTertiary} />}
             containerStyle={styles.input}
             rightComponent={
               <View style={styles.currencyLabel}>
@@ -199,156 +230,119 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
           />
         </AjoCard>
 
-        <AjoCard>
-          <View style={styles.frequencyGroup}>
-            <AjoTypography variant="label" style={styles.radioLabel}>
-              Frequency
-            </AjoTypography>
-            <View style={styles.frequencyRow}>
-              {(["weekly", "biweekly", "monthly"] as const).map((freq) => (
-                <TouchableOpacity
-                  key={freq}
-                  style={[
-                    styles.frequencyOption,
-                    frequency === freq && styles.frequencyOptionActive,
-                  ]}
-                  onPress={() => setFrequency(freq)}
+        <AjoCard padding={spacing.md} style={styles.formCard}>
+          <AjoTypography variant="label" style={styles.fieldLabel}>
+            Frequency
+          </AjoTypography>
+          <View style={styles.frequencyRow}>
+            {(["weekly", "biweekly", "monthly"] as const).map((freq) => (
+              <TouchableOpacity
+                key={freq}
+                style={[
+                  styles.frequencyOption,
+                  frequency === freq && styles.frequencyOptionActive,
+                ]}
+                onPress={() => setFrequency(freq)}
+              >
+                <AjoTypography
+                  variant="bodySmall"
+                  color={frequency === freq ? colors.textInverted : colors.textPrimary}
                 >
-                  <AjoTypography
-                    variant="bodySmall"
-                    color={
-                      frequency === freq
-                        ? colors.textTertiary
-                        : colors.textPrimary
-                    }
-                  >
-                    {freq.charAt(0).toUpperCase() + freq.slice(1)}
-                  </AjoTypography>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                </AjoTypography>
+              </TouchableOpacity>
+            ))}
           </View>
         </AjoCard>
 
-        <AjoCard>
-          <View style={styles.memberGroup}>
-            <AjoTypography variant="label" style={styles.radioLabel}>
-              Members
-            </AjoTypography>
-            <View style={styles.memberRow}>
-              {[5, 10, 15].map((num) => (
-                <TouchableOpacity
-                  key={num}
-                  style={[
-                    styles.memberOption,
-                    parseInt(memberCapacity) === num &&
-                      styles.memberOptionActive,
-                  ]}
-                  onPress={() => setMemberCapacity(num.toString())}
+        <AjoCard padding={spacing.md} style={styles.formCard}>
+          <AjoTypography variant="label" style={styles.fieldLabel}>
+            Members (including you)
+          </AjoTypography>
+          <View style={styles.memberRow}>
+            {[5, 10, 15].map((num) => (
+              <TouchableOpacity
+                key={num}
+                style={[
+                  styles.memberOption,
+                  parseInt(memberCapacity) === num && styles.memberOptionActive,
+                ]}
+                onPress={() => setMemberCapacity(num.toString())}
+              >
+                <AjoTypography
+                  variant="bodySmall"
+                  color={parseInt(memberCapacity) === num ? colors.textInverted : colors.textPrimary}
                 >
-                  <AjoTypography
-                    variant="bodySmall"
-                    color={
-                      parseInt(memberCapacity) === num
-                        ? colors.textTertiary
-                        : colors.textPrimary
-                    }
-                  >
-                    {num}
-                  </AjoTypography>
-                </TouchableOpacity>
-              ))}
-              <AjoInput
-                placeholder="Custom"
-                value={memberCapacity}
-                onChangeText={setMemberCapacity}
-                keyboardType="numeric"
-                containerStyle={styles.customMemberInput}
-                inputStyle={styles.customMemberText}
-              />
-            </View>
-            <AjoTypography
-              variant="chip"
-              color={colors.textTertiary}
-              style={styles.helperText}
+                  {num}
+                </AjoTypography>
+              </TouchableOpacity>
+            ))}
+            <AjoInput
+              placeholder="Custom"
+              value={memberCapacity}
+              onChangeText={setMemberCapacity}
+              keyboardType="numeric"
+              containerStyle={styles.customMemberInput}
+              inputStyle={styles.customMemberText}
+            />
+          </View>
+          <AjoTypography variant="chip" color={colors.textTertiary} style={styles.helperText}>
+            Including you
+          </AjoTypography>
+        </AjoCard>
+
+        <AjoCard padding={spacing.md} style={styles.formCard}>
+          <AjoTypography variant="label" style={styles.fieldLabel}>
+            Payout order
+          </AjoTypography>
+          <View style={styles.toggleRow}>
+            {(["random", "sequential"] as const).map((order) => (
+              <TouchableOpacity
+                key={order}
+                style={[
+                  styles.toggleOption,
+                  payoutOrder === order && styles.toggleOptionActive,
+                ]}
+                onPress={() => setPayoutOrder(order)}
+              >
+                <AjoTypography
+                  variant="bodySmall"
+                  color={payoutOrder === order ? colors.textInverted : colors.textPrimary}
+                >
+                  {order.charAt(0).toUpperCase() + order.slice(1)}
+                </AjoTypography>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </AjoCard>
+
+        <AjoCard padding={spacing.md} style={styles.formCard}>
+          <AjoTypography variant="label" style={styles.fieldLabel}>
+            Open join
+          </AjoTypography>
+          <View style={styles.toggleRow}>
+            <TouchableOpacity
+              style={[styles.toggleOption, openJoin === true && styles.toggleOptionActive]}
+              onPress={() => setOpenJoin(true)}
             >
-              Including you
-            </AjoTypography>
-          </View>
-        </AjoCard>
-
-        <AjoCard>
-          <View style={styles.toggleGroup}>
-            <AjoTypography variant="label" style={styles.radioLabel}>
-              Payout order
-            </AjoTypography>
-            <View style={styles.toggleRow}>
-              {(["random", "sequential"] as const).map((order) => (
-                <TouchableOpacity
-                  key={order}
-                  style={[
-                    styles.toggleOption,
-                    payoutOrder === order && styles.toggleOptionActive,
-                  ]}
-                  onPress={() => setPayoutOrder(order)}
-                >
-                  <AjoTypography
-                    variant="bodySmall"
-                    color={
-                      payoutOrder === order
-                        ? colors.textTertiary
-                        : colors.textPrimary
-                    }
-                  >
-                    {order.charAt(0).toUpperCase() + order.slice(1)}
-                  </AjoTypography>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </AjoCard>
-
-        <AjoCard>
-          <View style={styles.toggleGroup}>
-            <AjoTypography variant="label" style={styles.radioLabel}>
-              Open join
-            </AjoTypography>
-            <View style={styles.toggleRow}>
-              <TouchableOpacity
-                style={[
-                  styles.toggleOption,
-                  openJoin === true && styles.toggleOptionActive,
-                ]}
-                onPress={() => setOpenJoin(true)}
+              <AjoTypography
+                variant="bodySmall"
+                color={openJoin === true ? colors.textInverted : colors.textPrimary}
               >
-                <AjoTypography
-                  variant="bodySmall"
-                  color={
-                    openJoin === true ? colors.textTertiary : colors.textPrimary
-                  }
-                >
-                  Yes
-                </AjoTypography>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.toggleOption,
-                  openJoin === false && styles.toggleOptionActive,
-                ]}
-                onPress={() => setOpenJoin(false)}
+                Yes
+              </AjoTypography>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleOption, openJoin === false && styles.toggleOptionActive]}
+              onPress={() => setOpenJoin(false)}
+            >
+              <AjoTypography
+                variant="bodySmall"
+                color={openJoin === false ? colors.textInverted : colors.textPrimary}
               >
-                <AjoTypography
-                  variant="bodySmall"
-                  color={
-                    openJoin === false
-                      ? colors.textTertiary
-                      : colors.textPrimary
-                  }
-                >
-                  No (approval required)
-                </AjoTypography>
-              </TouchableOpacity>
-            </View>
+                No (approval required)
+              </AjoTypography>
+            </TouchableOpacity>
           </View>
         </AjoCard>
       </View>
@@ -366,73 +360,41 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
         </AjoTypography>
       </View>
 
-      <View style={styles.reviewCard}>
+      <AjoCard padding={spacing.md} style={styles.reviewCard}>
         {[
           { icon: "users", label: "Circle name", value: name },
-          {
-            icon: "dollar-sign",
-            label: "Contribution",
-            value: `₦${parseFloat(amount).toLocaleString()} / ${frequency}`,
-          },
-          {
-            icon: "users",
-            label: "Members",
-            value: `${memberCapacity} (including you)`,
-          },
-          {
-            icon: "lock",
-            label: "Circle type",
-            value: circleType === "private" ? "Private" : "Public",
-          },
-          {
-            icon: "shuffle",
-            label: "Payout order",
-            value: payoutOrder.charAt(0).toUpperCase() + payoutOrder.slice(1),
-          },
-          {
-            icon: "user-plus",
-            label: "Open join",
-            value: openJoin ? "Yes" : "No (approval required)",
-          },
+          { icon: "dollar-sign", label: "Contribution", value: `₦${parseFloat(amount).toLocaleString()} / ${frequency}` },
+          { icon: "users", label: "Members", value: `${memberCapacity} (including you)` },
+          { icon: "lock", label: "Circle type", value: circleType === "private" ? "Private" : "Public" },
+          { icon: "shuffle", label: "Payout order", value: payoutOrder.charAt(0).toUpperCase() + payoutOrder.slice(1) },
+          { icon: "user-plus", label: "Open join", value: openJoin ? "Yes" : "No (approval required)" },
         ].map((item, index) => (
           <View
             key={index}
             style={[styles.reviewItem, index === 5 && styles.reviewItemLast]}
           >
             <View style={styles.reviewIcon}>
-              <Feather
-                name={item.icon as any}
-                size={16}
-                color={colors.primary}
-              />
+              <Feather name={item.icon as any} size={16} color={colors.primary} />
             </View>
             <View style={styles.reviewContent}>
-              <AjoTypography variant="label" color={colors.textTertiary}>
+              <AjoTypography variant="chip" color={colors.textTertiary}>
                 {item.label}
               </AjoTypography>
               <AjoTypography variant="body" weight="500">
                 {item.value}
               </AjoTypography>
             </View>
-            <TouchableOpacity
-              onPress={() => setStep(1)}
-              style={styles.editButton}
-            >
+            <TouchableOpacity onPress={() => setStep(1)} style={styles.editButton}>
               <Feather name="edit-2" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
         ))}
-      </View>
+      </AjoCard>
 
       <View style={styles.infoBox}>
         <Feather name="info" size={16} color={colors.primary} />
-        <AjoTypography
-          variant="bodySmall"
-          color={colors.textSecondary}
-          style={styles.infoText}
-        >
-          Your circle will be created once you confirm. You can invite members
-          afterwards.
+        <AjoTypography variant="bodySmall" color={colors.textSecondary} style={styles.infoText}>
+          Your circle will be created once you confirm. You can invite members afterwards.
         </AjoTypography>
       </View>
     </View>
@@ -445,47 +407,27 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
         <AjoTypography variant="h2" style={styles.successTitle}>
           Circle Created!
         </AjoTypography>
-        <AjoTypography
-          variant="body"
-          color={colors.textSecondary}
-          style={styles.successSubtitle}
-        >
+        <AjoTypography variant="body" color={colors.textSecondary} style={styles.successSubtitle}>
           Your circle "{name}" is now live. Invite members to start saving.
         </AjoTypography>
       </View>
 
-      <View style={styles.summaryCard}>
+      <AjoCard padding={spacing.md} style={styles.summaryCard}>
         {[
           { icon: "users", label: "Circle name", value: name },
-          {
-            icon: "dollar-sign",
-            label: "Contribution",
-            value: `₦${parseFloat(amount).toLocaleString()} / ${frequency}`,
-          },
-          {
-            icon: "users",
-            label: "Members",
-            value: `${memberCapacity} (including you)`,
-          },
-          {
-            icon: "lock",
-            label: "Circle type",
-            value: circleType === "private" ? "Private" : "Public",
-          },
+          { icon: "dollar-sign", label: "Contribution", value: `₦${parseFloat(amount).toLocaleString()} / ${frequency}` },
+          { icon: "users", label: "Members", value: `${memberCapacity} (including you)` },
+          { icon: "lock", label: "Circle type", value: circleType === "private" ? "Private" : "Public" },
         ].map((item, index) => (
           <View
             key={index}
             style={[styles.summaryItem, index === 3 && styles.summaryItemLast]}
           >
             <View style={styles.summaryIcon}>
-              <Feather
-                name={item.icon as any}
-                size={16}
-                color={colors.primary}
-              />
+              <Feather name={item.icon as any} size={16} color={colors.primary} />
             </View>
             <View style={styles.summaryContent}>
-              <AjoTypography variant="label" color={colors.textTertiary}>
+              <AjoTypography variant="chip" color={colors.textTertiary}>
                 {item.label}
               </AjoTypography>
               <AjoTypography variant="body" weight="500">
@@ -494,35 +436,26 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
             </View>
           </View>
         ))}
-      </View>
+      </AjoCard>
 
       <View style={styles.activationCard}>
         <Feather name="shield" size={16} color={colors.primary} />
-        <AjoTypography
-          variant="bodySmall"
-          color={colors.textPrimary}
-          style={styles.activationText}
-        >
-          Your circle will activate when all members join and complete their
-          first contribution.
+        <AjoTypography variant="bodySmall" color={colors.textPrimary} style={styles.activationText}>
+          Your circle will activate when all members join and complete their first contribution.
         </AjoTypography>
       </View>
 
       <View style={styles.successActions}>
         <AjoButton
           title="Invite members"
-          onPress={() => Alert.alert("Invite", "Invite members to your circle")}
+          onPress={() => {
+            showMessage("Invite", "Invite members to your circle (coming soon)", false);
+          }}
         />
         <AjoButton
           title="Go to circle"
           variant="outline"
-          onPress={() => {
-            if (createdCircle) {
-              router.push(`/circle/${createdCircle.id}`);
-            } else {
-              router.back();
-            }
-          }}
+          onPress={goToCircle}
         />
       </View>
     </View>
@@ -530,16 +463,21 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-          <Feather name="arrow-left" size={24} color={colors.textPrimary} />
+          <Feather name="x" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-
+        <AjoTypography variant="h3" style={styles.headerTitle}>
+          Create Circle
+        </AjoTypography>
         <View style={{ width: 40 }} />
       </View>
 
-      {step < 3}
+      {/* Step Indicator */}
+      <StepIndicator />
 
+      {/* Main Content */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -549,26 +487,60 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
         {step === 3 && renderStep3()}
       </ScrollView>
 
+      {/* Footer */}
       {step < 3 && (
         <View style={styles.footer}>
+          {step === 2 && (
+            <TouchableOpacity onPress={() => setStep(1)} style={styles.backLink}>
+              <AjoTypography variant="bodySmall" color={colors.textSecondary}>
+                ← Back
+              </AjoTypography>
+            </TouchableOpacity>
+          )}
           <AjoButton
             title={step === 1 ? "Continue" : "Create Circle"}
             onPress={handleNext}
             loading={isSubmitting}
             disabled={isSubmitting}
+            style={styles.footerButton}
           />
-          {step === 2 && (
-            <TouchableOpacity
-              onPress={() => setStep(1)}
-              style={styles.backLink}
-            >
-              <AjoTypography variant="bodySmall" color={colors.textSecondary}>
-                ← Go back
-              </AjoTypography>
-            </TouchableOpacity>
-          )}
         </View>
       )}
+
+      {/* Message Sheet */}
+      <ReusableBottomSheet
+        ref={messageSheetRef}
+        snapPoints={["auto"]}
+        initialIndex={-1}
+        enablePanDownToClose
+      >
+        {({ close }) => (
+          <View style={styles.messageSheetContent}>
+            <Feather
+              name={messageData.isSuccess ? "check-circle" : "alert-circle"}
+              size={48}
+              color={messageData.isSuccess ? colors.success : colors.error}
+            />
+            <AjoTypography variant="h2" style={styles.messageTitle}>
+              {messageData.title}
+            </AjoTypography>
+            <AjoTypography variant="body" color={colors.textSecondary} style={styles.messageBody}>
+              {messageData.message}
+            </AjoTypography>
+            <AjoButton
+              style={styles.messageButton}
+              onPress={() => {
+                close();
+                if (messageData.onOk) messageData.onOk();
+              }}
+            >
+              <AjoTypography variant="button" color={colors.buttonText}>
+                OK
+              </AjoTypography>
+            </AjoButton>
+          </View>
+        )}
+      </ReusableBottomSheet>
     </SafeAreaView>
   );
 }
@@ -576,16 +548,16 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.surfacePrimary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   closeButton: {
     padding: spacing.xs,
@@ -594,30 +566,72 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
-
+  stepIndicator: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  stepDotContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  stepDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  stepDotActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  stepDotCompleted: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  stepDotText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  stepLine: {
+    width: 40,
+    height: 2,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.xs,
+  },
+  stepLineCompleted: {
+    backgroundColor: colors.success,
+  },
   scrollContent: {
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.xl,
   },
-
+  stepContainer: {
+    paddingTop: spacing.md,
+  },
   sectionHeader: {
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    textAlign: "left",
+    marginBottom: spacing.xs,
   },
   formGroup: {
-    gap: spacing.sm,
+    gap: spacing.md,
+  },
+  formCard: {
+    borderRadius: radius.lg,
   },
   input: {
     marginBottom: 0,
   },
-  radioGroup: {
-    gap: spacing.xs,
-  },
-  radioLabel: {
-    marginBottom: spacing.xs,
+  fieldLabel: {
+    marginBottom: spacing.sm,
   },
   radioRow: {
     flexDirection: "row",
@@ -630,12 +644,12 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radius.md,
     gap: spacing.sm,
   },
   radioOptionActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: colors.primary + "15",
   },
   radioCircle: {
     width: 20,
@@ -652,17 +666,17 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: colors.primary,
   },
+  radioText: {
+    flex: 1,
+  },
   currencyLabel: {
     paddingHorizontal: spacing.xs,
     borderLeftWidth: 1,
     borderLeftColor: colors.border,
   },
-  frequencyGroup: {
-    gap: spacing.xs,
-  },
   frequencyRow: {
     flexDirection: "row",
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   frequencyOption: {
     flex: 1,
@@ -670,18 +684,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
   },
   frequencyOptionActive: {
-    backgroundColor: colors.primaryTint,
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
-  },
-  memberGroup: {
-    gap: spacing.xs,
   },
   memberRow: {
     flexDirection: "row",
-    gap: spacing.xs,
+    gap: spacing.sm,
     alignItems: "center",
   },
   memberOption: {
@@ -690,10 +702,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
   },
   memberOptionActive: {
-    backgroundColor: colors.primaryTint,
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   customMemberInput: {
@@ -706,12 +719,9 @@ const styles = StyleSheet.create({
   helperText: {
     marginTop: spacing.xs,
   },
-  toggleGroup: {
-    gap: spacing.xs,
-  },
   toggleRow: {
     flexDirection: "row",
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   toggleOption: {
     flex: 1,
@@ -719,26 +729,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
   },
   toggleOptionActive: {
-    backgroundColor: colors.primaryTint,
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   reviewCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
   },
   reviewItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    borderBottomColor: colors.border,
   },
   reviewItemLast: {
     borderBottomWidth: 0,
@@ -747,7 +754,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
     marginRight: spacing.sm,
@@ -761,10 +768,12 @@ const styles = StyleSheet.create({
   infoBox: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.sm,
+    padding: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: 8,
+    borderRadius: radius.md,
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   infoText: {
     flex: 1,
@@ -772,7 +781,7 @@ const styles = StyleSheet.create({
   successHeader: {
     alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   successTitle: {
     textAlign: "center",
@@ -781,19 +790,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   summaryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
   },
   summaryItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    borderBottomColor: colors.border,
   },
   summaryItemLast: {
     borderBottomWidth: 0,
@@ -802,7 +807,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surfaceSecondary,
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
     marginRight: spacing.sm,
@@ -815,10 +820,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: 8,
+    borderRadius: radius.md,
     gap: spacing.sm,
-    borderWidth: 0.5,
+    borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: spacing.lg,
   },
   activationText: {
     flex: 1,
@@ -829,15 +835,41 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.lg,
     backgroundColor: colors.background,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  footerButton: {
+    flex: 1,
   },
   backLink: {
-    alignSelf: "center",
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  // Message sheet
+  messageSheetContent: {
+    padding: spacing.lg,
+    alignItems: "center",
+  },
+  messageTitle: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    textAlign: "center",
+  },
+  messageBody: {
+    textAlign: "center",
+    marginBottom: spacing.lg,
+    lineHeight: 22,
+    paddingHorizontal: spacing.md,
+  },
+  messageButton: {
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: "center",
   },
 });

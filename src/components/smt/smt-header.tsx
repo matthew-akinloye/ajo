@@ -1,8 +1,6 @@
-
 import { colors } from "@/theme/colors";
 import { radius } from "@/theme/radius";
 import { spacing } from "@/theme/spacing";
-import { GlassContainer, GlassView } from "expo-glass-effect";
 import React, { useMemo } from "react";
 import {
   Pressable,
@@ -16,44 +14,27 @@ import {
 } from "react-native";
 
 export interface HeaderProps {
-  /** Main title (string or custom React node) */
   title?: React.ReactNode;
-  /** Custom style for the title */
   titleStyle?: StyleProp<TextStyle>;
-  /** Icon or element to display on the left side */
   leftIcon?: React.ReactNode;
-  /** Press handler for the left button */
   onLeftPress?: () => void;
-  /** Props passed to the left Pressable */
   leftPressableProps?: Omit<PressableProps, "onPress" | "children">;
-  /** Icon or element to display on the right side (single button) */
   rightIcon?: React.ReactNode;
-  /** Press handler for the right button */
   onRightPress?: () => void;
-  /** Props passed to the right Pressable (single button) */
   rightPressableProps?: Omit<PressableProps, "onPress" | "children">;
-  /** Multiple right buttons (overrides `rightIcon`/`onRightPress`) */
   rightButtons?: {
     icon: React.ReactNode;
     onPress: () => void;
     key?: string;
     pressableProps?: Omit<PressableProps, "onPress" | "children">;
   }[];
-  /** Custom component to replace the entire left area */
   leftComponent?: React.ReactNode;
-  /** Custom component to replace the entire right area */
   rightComponent?: React.ReactNode;
-  /** Style for the outer header container */
   headerStyle?: StyleProp<ViewStyle>;
-  /** Style for the `GlassContainer` that wraps the right-side buttons */
   glassContainerStyle?: StyleProp<ViewStyle>;
-  /** Style for each individual glass button (applies to all) */
   glassButtonStyle?: StyleProp<ViewStyle>;
-  /** Spacing between glass buttons (used in `GlassContainer`) */
   glassSpacing?: number;
-  /** If true, the header will use absolute positioning (default: true) */
   absolute?: boolean;
-  /** Top offset for absolute positioning (default: 50) */
   topOffset?: number;
 }
 
@@ -72,11 +53,10 @@ const Header: React.FC<HeaderProps> = ({
   headerStyle,
   glassContainerStyle,
   glassButtonStyle,
-  glassSpacing = spacing.sm, // 8
+  glassSpacing = spacing.sm,
   absolute = true,
   topOffset = 50,
 }) => {
-  // Build styles
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -111,6 +91,10 @@ const Header: React.FC<HeaderProps> = ({
           borderRadius: radius.full,
           justifyContent: "center",
           alignItems: "center",
+          backgroundColor: "rgba(255, 255, 255, 0.15)",
+          borderWidth: 0.5,
+          borderColor: "rgba(255,255,255,0.3)",
+          overflow: "hidden",
         },
         pressed: {
           opacity: 0.7,
@@ -119,7 +103,6 @@ const Header: React.FC<HeaderProps> = ({
     [],
   );
 
-  // Render left content
   const renderLeft = () => {
     if (leftComponent) return leftComponent;
     if (leftIcon) {
@@ -133,54 +116,53 @@ const Header: React.FC<HeaderProps> = ({
             pressed && styles.pressed,
           ]}
         >
-          <GlassView
-            style={[styles.glassButton, glassButtonStyle]}
-            isInteractive
-          >
+          <View style={[styles.glassButton, glassButtonStyle]}>
             {leftIcon}
-          </GlassView>
+          </View>
         </Pressable>
       );
     }
     return null;
   };
 
-  // Render right content
   const renderRight = () => {
-    const buttons = [];
+    const buttons: React.ReactNode[] = [];
 
-    // Add custom component if provided
+    // Custom component
     if (rightComponent) {
-      buttons.push(rightComponent);
+      buttons.push(
+        <View key="right-component" style={styles.rightContainer}>
+          {rightComponent}
+        </View>
+      );
     }
 
     // Multiple buttons
     if (rightButtons && rightButtons.length > 0) {
+      const btnElements = rightButtons.map((btn, index) => (
+        <Pressable
+          key={btn.key || `right-btn-${index}`}
+          onPress={btn.onPress}
+          {...btn.pressableProps}
+          style={({ pressed }) => [
+            styles.glassButton,
+            glassButtonStyle,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={[styles.glassButton, glassButtonStyle]}>
+            {btn.icon}
+          </View>
+        </Pressable>
+      ));
+
       buttons.push(
-        <GlassContainer
-          spacing={glassSpacing}
+        <View
+          key="right-buttons-group"
           style={[glassContainerStyle, styles.rightContainer]}
         >
-          {rightButtons.map((btn, index) => (
-            <Pressable
-              key={btn.key || index}
-              onPress={btn.onPress}
-              {...btn.pressableProps}
-              style={({ pressed }) => [
-                styles.glassButton,
-                glassButtonStyle,
-                pressed && styles.pressed,
-              ]}
-            >
-              <GlassView
-                style={[styles.glassButton, glassButtonStyle]}
-                isInteractive
-              >
-                {btn.icon}
-              </GlassView>
-            </Pressable>
-          ))}
-        </GlassContainer>,
+          {btnElements}
+        </View>
       );
     }
 
@@ -188,6 +170,7 @@ const Header: React.FC<HeaderProps> = ({
     if (rightIcon) {
       buttons.push(
         <Pressable
+          key="single-right-btn"
           onPress={onRightPress}
           {...rightPressableProps}
           style={({ pressed }) => [
@@ -196,13 +179,10 @@ const Header: React.FC<HeaderProps> = ({
             pressed && styles.pressed,
           ]}
         >
-          <GlassView
-            style={[styles.glassButton, glassButtonStyle]}
-            isInteractive
-          >
+          <View style={[styles.glassButton, glassButtonStyle]}>
             {rightIcon}
-          </GlassView>
-        </Pressable>,
+          </View>
+        </Pressable>
       );
     }
 
@@ -221,7 +201,6 @@ const Header: React.FC<HeaderProps> = ({
         <Text style={[styles.glassText, titleStyle]}>{title}</Text>
       )}
       <View style={styles.rightContainer}>
-       
         {renderRight()}
       </View>
     </View>

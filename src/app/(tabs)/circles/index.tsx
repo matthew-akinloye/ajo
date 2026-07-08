@@ -1,13 +1,14 @@
 // app/(tabs)/circles/index.tsx
 import { CircleList } from "@/components/circles/CircleList";
 import Header from "@/components/smt/smt-header";
+import { AjoTypography } from "@/components/ui/AjoTypography";
+import ReusableBottomSheet, { ReusableBottomSheetRef } from "@/components/smt/smt-bottom-sheet";
 import { apiService } from "@/services/api.service";
 import { colors } from "@/theme/colors";
 import { spacing } from "@/theme/spacing";
 import { Feather } from "@expo/vector-icons";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  Alert,
   Modal,
   RefreshControl,
   SafeAreaView,
@@ -15,7 +16,10 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import CreateCircleModal from "./create"; // our creation component
+import CreateCircleModal from "./create";
+import { radius } from "@/theme/radius";
+import AjoButton from "@/components/ui/AjoButton";
+import { router } from "expo-router";
 
 export default function CirclesScreen() {
   const [circles, setCircles] = useState<any[]>([]);
@@ -23,12 +27,26 @@ export default function CirclesScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Bottom sheet for errors
+  const messageSheetRef = useRef<ReusableBottomSheetRef>(null);
+  const [messageData, setMessageData] = useState<{
+    title: string;
+    message: string;
+    isSuccess: boolean;
+  }>({ title: "", message: "", isSuccess: false });
+
+  const showMessage = (title: string, message: string, isSuccess: boolean) => {
+    setMessageData({ title, message, isSuccess });
+    messageSheetRef.current?.snapToIndex(0);
+  };
+
   const loadCircles = async () => {
     try {
       const data = await apiService.listCircles();
       setCircles(data);
     } catch (error) {
       console.error("Failed to load circles:", error);
+      showMessage("Error", "Could not load your circles.", false);
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +72,10 @@ export default function CirclesScreen() {
               icon: <Feather name="plus" size={24} color={colors.textPrimary} />,
               onPress: () => setShowCreateModal(true),
             },
+            {
+              icon: <Feather name="mail" size={24} color={colors.textPrimary} />,
+              onPress: () => {router.push("/circles/invites")},
+            },
           ]}
           headerStyle={styles.header}
         />
@@ -67,10 +89,18 @@ export default function CirclesScreen() {
             />
           }
         >
-          <CircleList
-            circles={circles}
-            emptyMessage="You haven't joined or created any circles yet."
-          />
+          {isLoading ? (
+            <View style={styles.loadingState}>
+              <AjoTypography variant="body" color={colors.textTertiary}>
+                Loading circles...
+              </AjoTypography>
+            </View>
+          ) : (
+            <CircleList
+              circles={circles}
+              emptyMessage="You haven't joined or created any circles yet."
+            />
+          )}
         </ScrollView>
       </SafeAreaView>
 
@@ -83,6 +113,40 @@ export default function CirclesScreen() {
       >
         <CreateCircleModal onClose={() => setShowCreateModal(false)} />
       </Modal>
+
+      {/* Error Message Sheet */}
+      <ReusableBottomSheet
+        ref={messageSheetRef}
+        snapPoints={["auto"]}
+        initialIndex={-1}
+        enablePanDownToClose
+      >
+        {({ close }) => (
+          <View style={styles.messageSheetContent}>
+            <Feather
+              name={messageData.isSuccess ? "check-circle" : "alert-circle"}
+              size={48}
+              color={messageData.isSuccess ? colors.success : colors.error}
+            />
+            <AjoTypography variant="body" style={styles.messageTitle}>
+              {messageData.title}
+            </AjoTypography>
+            <AjoTypography variant="mono" color={colors.textSecondary} style={styles.messageBody}>
+              {messageData.message}
+            </AjoTypography>
+            <AjoButton
+              style={styles.messageButton}
+              onPress={() => {
+                close();
+              }}
+            >
+              <AjoTypography variant="button" color={colors.buttonText}>
+                OK
+              </AjoTypography>
+            </AjoButton>
+          </View>
+        )}
+      </ReusableBottomSheet>
     </>
   );
 }
@@ -99,5 +163,32 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.md,
     paddingTop: spacing.sm,
+  },
+  loadingState: {
+    paddingVertical: spacing.xl,
+    alignItems: "center",
+  },
+  // Message sheet styles
+  messageSheetContent: {
+    padding: spacing.lg,
+    alignItems: "center",
+  },
+  messageTitle: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    textAlign: "center",
+  },
+  messageBody: {
+    textAlign: "center",
+    marginBottom: spacing.lg,
+    lineHeight: 22,
+    paddingHorizontal: spacing.md,
+  },
+  messageButton: {
+    width: "100%",
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: "center",
   },
 });

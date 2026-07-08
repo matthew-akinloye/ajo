@@ -3,26 +3,20 @@
  * Reusable modal for PIN verification before sensitive actions
  */
 
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Text } from "@/components/ui/Text";
+import AjoButton from "@/components/ui/AjoButton";
+import { AjoCard } from "@/components/ui/AjoCard";
+import { AjoTypography } from "@/components/ui/AjoTypography";
 import { apiService } from "@/services/api.service";
 import { colors } from "@/theme/colors";
 import { radius, spacing } from "@/theme/spacing";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useState } from "react";
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 interface PinModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (pin: string) => void;
   title?: string;
   message?: string;
 }
@@ -49,7 +43,7 @@ export function PinModal({
 
     try {
       await apiService.verifyPin({ pin });
-      onSuccess();
+      onSuccess(pin);
       handleClose();
     } catch (err: any) {
       setError("Incorrect PIN");
@@ -82,20 +76,27 @@ export function PinModal({
       onRequestClose={handleClose}
     >
       <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.container} onPress={(e) => e.stopPropagation()}>
-          <Card variant="default" padding={spacing.xl} style={styles.card}>
+        <Pressable
+          style={styles.container}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <AjoCard style={styles.card}>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.iconContainer}>
                 <MaterialIcons name="lock" size={32} color={colors.primary} />
               </View>
-              <Text variant="h3" style={styles.title}>
+              <AjoTypography variant="cardTitle" style={styles.title}>
                 {title}
-              </Text>
+              </AjoTypography>
               {message && (
-                <Text variant="body" color={colors.textSecondary} style={styles.message}>
+                <AjoTypography
+                  variant="body"
+                  color={colors.textSecondary}
+                  style={styles.message}
+                >
                   {message}
-                </Text>
+                </AjoTypography>
               )}
             </View>
 
@@ -111,18 +112,18 @@ export function PinModal({
                       pin.length > index ? styles.pinBoxFilled : null,
                     ]}
                   >
-                    <Text
-                      variant="h2"
+                    <AjoTypography
+                      variant="amountHero"
                       color={
                         error
                           ? colors.error
                           : pin.length > index
-                          ? colors.primary
-                          : colors.textTertiary
+                            ? colors.primary
+                            : colors.textTertiary
                       }
                     >
                       {pin.length > index ? "•" : ""}
-                    </Text>
+                    </AjoTypography>
                   </View>
                 ))}
               </View>
@@ -141,30 +142,31 @@ export function PinModal({
 
             {/* Error Message */}
             {error ? (
-              <Text variant="label" color={colors.error} style={styles.error}>
+              <AjoTypography
+                variant="label"
+                color={colors.error}
+                style={styles.error}
+              >
                 {error}
-              </Text>
+              </AjoTypography>
             ) : null}
 
             {/* Actions */}
             <View style={styles.actions}>
-              <Button
-                label="Cancel"
-                variant="outlined"
-                size="lg"
+              <AjoButton
+                title="Cancel"
+                variant="outline"
                 style={styles.cancelButton}
                 onPress={handleClose}
               />
-              <Button
-                label={isLoading ? "Verifying..." : "Confirm"}
-                variant="primary"
-                size="lg"
+              <AjoButton
+                title={isLoading ? "Verifying..." : "Confirm"}
                 style={styles.confirmButton}
                 onPress={handleSubmit}
                 disabled={isLoading || pin.length !== 4}
               />
             </View>
-          </Card>
+          </AjoCard>
         </Pressable>
       </Pressable>
     </Modal>

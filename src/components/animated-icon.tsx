@@ -1,3 +1,4 @@
+import { colors } from '@/theme';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   },
   backgroundSolidColor: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#ef2020',
+    backgroundColor: colors.primarySoft,
     zIndex: 1000,
   },
 });
