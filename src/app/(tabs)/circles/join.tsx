@@ -3,19 +3,21 @@
  * Join a circle using invite code or browse available circles
  */
 
+import ReusableBottomSheet, {
+  ReusableBottomSheetRef,
+} from "@/components/smt/smt-bottom-sheet";
 import Header from "@/components/smt/smt-header";
 import AjoButton from "@/components/ui/AjoButton";
 import { AjoCard } from "@/components/ui/AjoCard";
 import AjoInput from "@/components/ui/AjoInput";
 import { AjoTypography } from "@/components/ui/AjoTypography";
-import ReusableBottomSheet, { ReusableBottomSheetRef } from "@/components/smt/smt-bottom-sheet";
 import { apiService } from "@/services/api.service";
 import { colors } from "@/theme/colors";
-import { spacing } from "@/theme/spacing";
 import { radius } from "@/theme/radius";
+import { spacing } from "@/theme/spacing";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -60,13 +62,23 @@ export default function JoinCircleScreen() {
   });
 
   // Show message bottom sheet
-  const showMessage = (title: string, message: string, isSuccess: boolean, onOk?: () => void) => {
+  const showMessage = (
+    title: string,
+    message: string,
+    isSuccess: boolean,
+    onOk?: () => void,
+  ) => {
     setMessageData({ title, message, isSuccess, onOk });
     messageSheetRef.current?.snapToIndex(0);
   };
 
   // Show confirm bottom sheet
-  const showConfirm = (title: string, message: string, circleName: string, onConfirm: () => void) => {
+  const showConfirm = (
+    title: string,
+    message: string,
+    circleName: string,
+    onConfirm: () => void,
+  ) => {
     setConfirmData({ title, message, circleName, onConfirm });
     confirmSheetRef.current?.snapToIndex(0);
   };
@@ -84,7 +96,11 @@ export default function JoinCircleScreen() {
       // Preview the invite to get circle info
       const preview = await apiService.previewInvite(code);
       if (!preview || !preview.circle) {
-        showMessage("Invalid Code", "This invite code does not exist or has expired.", false);
+        showMessage(
+          "Invalid Code",
+          "This invite code does not exist or has expired.",
+          false,
+        );
         return;
       }
 
@@ -103,24 +119,24 @@ export default function JoinCircleScreen() {
               true,
               () => {
                 // Navigate to circle detail
-                router.push(`/(tabs)/circle/${membership.circle_id}`);
-              }
+                router.push(`/(tabs)/circles/${membership.circle_id}`);
+              },
             );
             setInviteCode("");
           } catch (error: any) {
             showMessage(
               "Error",
               error.message || "Failed to join the circle.",
-              false
+              false,
             );
           }
-        }
+        },
       );
     } catch (error: any) {
       showMessage(
         "Error",
         error.message || "Invalid invite code. Please check and try again.",
-        false
+        false,
       );
     } finally {
       setIsSubmitting(false);
@@ -129,7 +145,7 @@ export default function JoinCircleScreen() {
 
   // Navigate to explore tab
   const handleBrowse = () => {
-    router.push("/explore" as any);
+    router.push("/circles");
   };
 
   return (
@@ -253,7 +269,7 @@ export default function JoinCircleScreen() {
       {/* Message Sheet */}
       <ReusableBottomSheet
         ref={messageSheetRef}
-        snapPoints={["auto"]}
+        snapPoints={["40%"]}
         initialIndex={-1}
         enablePanDownToClose
       >
@@ -264,10 +280,14 @@ export default function JoinCircleScreen() {
               size={48}
               color={messageData.isSuccess ? colors.success : colors.error}
             />
-            <AjoTypography variant="h2" style={styles.messageTitle}>
+            <AjoTypography variant="body" style={styles.messageTitle}>
               {messageData.title}
             </AjoTypography>
-            <AjoTypography variant="body" color={colors.textSecondary} style={styles.messageBody}>
+            <AjoTypography
+              variant="mono"
+              color={colors.textSecondary}
+              style={styles.messageBody}
+            >
               {messageData.message}
             </AjoTypography>
             <AjoButton
@@ -288,17 +308,21 @@ export default function JoinCircleScreen() {
       {/* Confirm Sheet */}
       <ReusableBottomSheet
         ref={confirmSheetRef}
-        snapPoints={["auto"]}
+        snapPoints={["40%"]}
         initialIndex={-1}
         enablePanDownToClose
       >
         {({ close }) => (
           <View style={styles.confirmSheetContent}>
             <Feather name="users" size={40} color={colors.primary} />
-            <AjoTypography variant="h2" style={styles.confirmTitle}>
+            <AjoTypography variant="body" style={styles.confirmTitle}>
               {confirmData.title}
             </AjoTypography>
-            <AjoTypography variant="body" color={colors.textSecondary} style={styles.confirmMessage}>
+            <AjoTypography
+              variant="mono"
+              color={colors.textSecondary}
+              style={styles.confirmMessage}
+            >
               {confirmData.message}
             </AjoTypography>
             <View style={styles.confirmButtons}>
@@ -403,19 +427,21 @@ const styles = StyleSheet.create({
   },
   // Message sheet
   messageSheetContent: {
-    padding: spacing.lg,
+    padding: spacing.xs,
     alignItems: "center",
   },
   messageTitle: {
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
     textAlign: "center",
+    color: colors.textInverted,
   },
   messageBody: {
     textAlign: "center",
     marginBottom: spacing.lg,
     lineHeight: 22,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
+    color: colors.textInverted,
   },
   messageButton: {
     width: "100%",
@@ -426,19 +452,21 @@ const styles = StyleSheet.create({
   },
   // Confirm sheet
   confirmSheetContent: {
-    padding: spacing.lg,
+    padding: spacing.xs,
     alignItems: "center",
   },
   confirmTitle: {
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
     textAlign: "center",
+    color: colors.textInverted,
   },
   confirmMessage: {
     textAlign: "center",
     marginBottom: spacing.lg,
     lineHeight: 22,
     paddingHorizontal: spacing.md,
+    color: colors.textInverted,
   },
   confirmButtons: {
     flexDirection: "row",
@@ -448,7 +476,7 @@ const styles = StyleSheet.create({
   confirmButton: {
     flex: 1,
     borderRadius: radius.md,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.xs,
     alignItems: "center",
   },
   confirmCancelButton: {

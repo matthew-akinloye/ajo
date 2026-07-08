@@ -3,28 +3,30 @@
  * View and manage invites for your circles
  */
 
+import ReusableBottomSheet, {
+  ReusableBottomSheetRef,
+} from "@/components/smt/smt-bottom-sheet";
 import Header from "@/components/smt/smt-header";
+import AjoButton from "@/components/ui/AjoButton";
 import { AjoCard } from "@/components/ui/AjoCard";
 import { AjoTypography } from "@/components/ui/AjoTypography";
-import AjoButton  from "@/components/ui/AjoButton";
 import { PinModal, PinModalRef } from "@/components/ui/PinModal";
-import ReusableBottomSheet, { ReusableBottomSheetRef } from "@/components/smt/smt-bottom-sheet";
 import { apiService } from "@/services/api.service";
 import { CircleOut } from "@/services/api.types";
 import { colors } from "@/theme/colors";
-import { spacing } from "@/theme/spacing";
 import { radius } from "@/theme/radius";
+import { spacing } from "@/theme/spacing";
 import { Feather } from "@expo/vector-icons";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Clipboard,
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  Share,
   StyleSheet,
   TouchableOpacity,
   View,
-  Share,
-  Clipboard,
 } from "react-native";
 
 export default function InvitesScreen() {
@@ -56,7 +58,12 @@ export default function InvitesScreen() {
     isSuccess: false,
   });
 
-  const showMessage = (title: string, message: string, isSuccess: boolean, onOk?: () => void) => {
+  const showMessage = (
+    title: string,
+    message: string,
+    isSuccess: boolean,
+    onOk?: () => void,
+  ) => {
     setMessageData({ title, message, isSuccess, onOk });
     messageSheetRef.current?.snapToIndex(0);
   };
@@ -104,7 +111,7 @@ export default function InvitesScreen() {
             true,
             () => {
               // Optionally navigate to circle detail or refresh
-            }
+            },
           );
           // Optionally refresh data (though no invite list to update)
           // await loadData();
@@ -112,7 +119,7 @@ export default function InvitesScreen() {
           showMessage(
             "Error",
             error.message || "Failed to create invite.",
-            false
+            false,
           );
         }
       },
@@ -176,10 +183,18 @@ export default function InvitesScreen() {
           ) : circles.length === 0 ? (
             <View style={styles.emptyState}>
               <Feather name="users" size={48} color={colors.textTertiary} />
-              <AjoTypography variant="body" color={colors.textTertiary} style={styles.emptyText}>
+              <AjoTypography
+                variant="body"
+                color={colors.textTertiary}
+                style={styles.emptyText}
+              >
                 You don't have any circles yet.
               </AjoTypography>
-              <AjoTypography variant="bodySmall" color={colors.textSecondary} style={styles.emptySubtext}>
+              <AjoTypography
+                variant="bodySmall"
+                color={colors.textSecondary}
+                style={styles.emptySubtext}
+              >
                 Create or join a circle to start inviting others.
               </AjoTypography>
             </View>
@@ -200,11 +215,16 @@ export default function InvitesScreen() {
                         {circle.name}
                       </AjoTypography>
                       <AjoTypography variant="chip" color={colors.textTertiary}>
-                        {circle.status.toUpperCase()} · {circle.member_capacity} members
+                        {circle.status.toUpperCase()} · {circle.member_capacity}{" "}
+                        members
                       </AjoTypography>
                     </View>
                   </View>
-                  <Feather name="chevron-right" size={20} color={colors.textTertiary} />
+                  <Feather
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textTertiary}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
@@ -216,7 +236,7 @@ export default function InvitesScreen() {
         {/* Message Sheet for created invite */}
         <ReusableBottomSheet
           ref={messageSheetRef}
-          snapPoints={["auto"]}
+          snapPoints={["40%"]}
           initialIndex={-1}
           enablePanDownToClose
         >
@@ -230,7 +250,11 @@ export default function InvitesScreen() {
               <AjoTypography variant="body" style={styles.messageTitle}>
                 {messageData.title}
               </AjoTypography>
-              <AjoTypography variant="mono" color={colors.textSecondary} style={styles.messageBody}>
+              <AjoTypography
+                variant="mono"
+                color={colors.textSecondary}
+                style={styles.messageBody}
+              >
                 {messageData.message}
               </AjoTypography>
 
@@ -254,7 +278,11 @@ export default function InvitesScreen() {
                       style={styles.actionButton}
                       onPress={() => shareInvite(generatedInvite.code)}
                     >
-                      <Feather name="share-2" size={16} color={colors.primary} />
+                      <Feather
+                        name="share-2"
+                        size={16}
+                        color={colors.primary}
+                      />
                       <AjoTypography variant="chip" color={colors.primary}>
                         Share
                       </AjoTypography>
@@ -356,17 +384,22 @@ const styles = StyleSheet.create({
   messageSheetContent: {
     padding: spacing.lg,
     alignItems: "center",
+    color: colors.textInverted
   },
   messageTitle: {
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
     textAlign: "center",
+        color: colors.textInverted
+
   },
   messageBody: {
     textAlign: "center",
     marginBottom: spacing.lg,
     lineHeight: 22,
     paddingHorizontal: spacing.md,
+        color: colors.textInverted
+
   },
   messageButton: {
     width: "100%",

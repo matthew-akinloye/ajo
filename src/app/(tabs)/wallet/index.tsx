@@ -5,7 +5,9 @@
 
 import { QuickActionButton } from "@/components/QuickActionButton";
 import Header from "@/components/smt/smt-header";
-import ReusableBottomSheet, { ReusableBottomSheetRef } from "@/components/smt/smt-bottom-sheet";
+import ReusableBottomSheet, {
+  ReusableBottomSheetRef,
+} from "@/components/smt/smt-bottom-sheet";
 import { Card } from "@/components/ui/Card";
 import { AjoTypography } from "@/components/ui/AjoTypography";
 import AjoButton from "@/components/ui/AjoButton";
@@ -91,17 +93,19 @@ export default function WalletScreen() {
   };
 
   // --- Helpers to show bottom sheets ---
-  const showMessageSheet = (title: string, message: string, isSuccess: boolean, onOk?: () => void) => {
-    setMessageData({ title, message, isSuccess, onOk });
-    messageSheetRef.current?.snapToIndex(0);
-  };
+const showMessageSheet = (title: string, message: string, isSuccess: boolean, onOk?: () => void) => {
+  setMessageData({ title, message, isSuccess, onOk });
+  if (messageSheetRef.current) {
+    messageSheetRef.current.snapToIndex(0);
+  }
+};
 
   const showPromptSheet = (
     title: string,
     placeholder: string,
     secureTextEntry: boolean,
     onConfirm: (value: string) => void,
-    onCancel?: () => void
+    onCancel?: () => void,
   ) => {
     setPromptData({ title, placeholder, secureTextEntry, onConfirm, onCancel });
     setPromptInputValue("");
@@ -123,7 +127,11 @@ export default function WalletScreen() {
       async (amount) => {
         const parsed = Number(amount);
         if (!amount || isNaN(parsed) || parsed <= 0) {
-          showMessageSheet("Invalid Amount", "Please enter a valid amount.", false);
+          showMessageSheet(
+            "Invalid Amount",
+            "Please enter a valid amount.",
+            false,
+          );
           return;
         }
         try {
@@ -131,75 +139,90 @@ export default function WalletScreen() {
           showMessageSheet(
             "Funding Initiated",
             `Checkout link: ${response.checkout_url}`,
-            true
+            true,
           );
         } catch (error) {
           showMessageSheet(
             "Funding Failed",
             error instanceof Error ? error.message : "Please try again.",
-            false
+            false,
           );
         }
-      }
+      },
     );
   };
+
+  // const handleWithdraw = () => {
+  //   if (!wallet || wallet.balance === 0) {
+  //     showMessageSheet("Insufficient Balance", "Your wallet balance is zero.", false);
+  //     return;
+  //   }
+  //   showPromptSheet(
+  //     "Withdraw Funds",
+  //     "Enter amount (₦)",
+  //     false,
+  //     async (amount) => {
+  //       const parsed = Number(amount);
+  //       if (!amount || isNaN(parsed) || parsed <= 0) {
+  //         showMessageSheet("Invalid Amount", "Please enter a valid amount.", false);
+  //         return;
+  //       }
+  //       if (wallet && parsed > wallet.balance) {
+  //         showMessageSheet("Insufficient Balance", "Amount exceeds available balance.", false);
+  //         return;
+  //       }
+  //       pinModalRef.current?.show({
+  //         title: "Confirm Withdrawal",
+  //         subtitle: `Enter your PIN to withdraw ₦${parsed.toLocaleString()}`,
+  //         onConfirm: async (pin) => {
+  //           try {
+  //             await apiService.verifyPin({ pin });
+  //             await apiService.withdraw({
+  //               amount: parsed,
+  //               pin,
+  //               bank_account_number: "0000000000",
+  //               bank_code: "058",
+  //             });
+  //             showMessageSheet(
+  //               "Success",
+  //               "Your withdrawal request has been submitted.",
+  //               true,
+  //               () => loadWalletData()
+  //             );
+  //           } catch (error) {
+  //             showMessageSheet(
+  //               "Withdrawal Failed",
+  //               error instanceof Error ? error.message : "Please try again.",
+  //               false
+  //             );
+  //           }
+  //         },
+  //       });
+  //     }
+  //   );
+  // };
 
   const handleWithdraw = () => {
     if (!wallet || wallet.balance === 0) {
-      showMessageSheet("Insufficient Balance", "Your wallet balance is zero.", false);
+      showMessageSheet(
+        "Insufficient Balance",
+        "Your wallet balance is zero.",
+        false,
+      );
       return;
     }
-    showPromptSheet(
-      "Withdraw Funds",
-      "Enter amount (₦)",
+    router.push("/wallet/withdraw");
+  };
+  const handleTransfer = () => {
+    showMessageSheet(
+      "Coming Soon",
+      "Transfer support will be enabled soon.",
       false,
-      async (amount) => {
-        const parsed = Number(amount);
-        if (!amount || isNaN(parsed) || parsed <= 0) {
-          showMessageSheet("Invalid Amount", "Please enter a valid amount.", false);
-          return;
-        }
-        if (wallet && parsed > wallet.balance) {
-          showMessageSheet("Insufficient Balance", "Amount exceeds available balance.", false);
-          return;
-        }
-        pinModalRef.current?.show({
-          title: "Confirm Withdrawal",
-          subtitle: `Enter your PIN to withdraw ₦${parsed.toLocaleString()}`,
-          onConfirm: async (pin) => {
-            try {
-              await apiService.verifyPin({ pin });
-              await apiService.withdraw({
-                amount: parsed,
-                pin,
-                bank_account_number: "0000000000", 
-                bank_code: "058",
-              });
-              showMessageSheet(
-                "Success",
-                "Your withdrawal request has been submitted.",
-                true,
-                () => loadWalletData()
-              );
-            } catch (error) {
-              showMessageSheet(
-                "Withdrawal Failed",
-                error instanceof Error ? error.message : "Please try again.",
-                false
-              );
-            }
-          },
-        });
-      }
     );
   };
 
-  const handleTransfer = () => {
-    showMessageSheet("Coming Soon", "Transfer support will be enabled soon.", false);
-  };
-
   const goToHistory = () => {
-    router.push("/(tabs)/wallet/history");
+    router.push("/wallet/history");
   };
 
   // --- Render loading ---
@@ -233,11 +256,15 @@ export default function WalletScreen() {
           title="Wallet"
           rightButtons={[
             {
-              icon: <Feather name="clock" size={20} color={colors.textPrimary} />,
+              icon: (
+                <Feather name="clock" size={20} color={colors.textPrimary} />
+              ),
               onPress: goToHistory,
             },
             {
-              icon: <Feather name="settings" size={20} color={colors.textPrimary} />,
+              icon: (
+                <Feather name="settings" size={20} color={colors.textPrimary} />
+              ),
               onPress: () => console.log("Settings"),
             },
           ]}
@@ -279,7 +306,11 @@ export default function WalletScreen() {
           </View>
           <TouchableOpacity style={styles.fundWalletCard} onPress={handleFund}>
             <View style={styles.fundWalletIcon}>
-              <Ionicons name="wallet-outline" size={16} color={colors.primary} />
+              <Ionicons
+                name="wallet-outline"
+                size={16}
+                color={colors.primary}
+              />
             </View>
             <View style={styles.fundWalletText}>
               <AjoTypography variant="tab" color={colors.textPrimary}>
@@ -296,26 +327,55 @@ export default function WalletScreen() {
         {/* Quick Actions */}
         <View style={styles.actionsContainer}>
           <View style={styles.actions}>
-            <QuickActionButton icon="plus-circle" iconFamily="feather" label="Fund" onPress={handleFund} />
-            <QuickActionButton icon="arrow-up" iconFamily="feather" label="Withdraw" onPress={handleWithdraw} />
-            <QuickActionButton icon="repeat" iconFamily="feather" label="Transfer" onPress={handleTransfer} />
+            <QuickActionButton
+              icon="plus-circle"
+              iconFamily="feather"
+              label="Fund"
+              onPress={handleFund}
+            />
+            <QuickActionButton
+              icon="arrow-up"
+              iconFamily="feather"
+              label="Withdraw"
+              onPress={handleWithdraw}
+            />
+            <QuickActionButton
+              icon="repeat"
+              iconFamily="feather"
+              label="Transfer"
+              onPress={handleTransfer}
+            />
           </View>
         </View>
 
         {/* Transactions */}
         <View style={styles.transactionsSection}>
           <View style={styles.sectionHeader}>
-            <AjoTypography variant="monoSmall">Recent Transactions</AjoTypography>
+            <AjoTypography variant="monoSmall">
+              Recent Transactions
+            </AjoTypography>
             <TouchableOpacity onPress={goToHistory}>
-              <AjoTypography variant="monoSmall" color={colors.primary} style={styles.viewAll}>
+              <AjoTypography
+                variant="monoSmall"
+                color={colors.primary}
+                style={styles.viewAll}
+              >
                 View All
               </AjoTypography>
             </TouchableOpacity>
           </View>
 
-          <Card variant="default" padding={spacing.md} style={styles.transactionCard}>
+          <Card
+            variant="default"
+            padding={spacing.md}
+            style={styles.transactionCard}
+          >
             {transactions.length === 0 ? (
-              <AjoTypography variant="body" color={colors.textTertiary} style={styles.emptyState}>
+              <AjoTypography
+                variant="body"
+                color={colors.textTertiary}
+                style={styles.emptyState}
+              >
                 No transactions yet.
               </AjoTypography>
             ) : (
@@ -325,7 +385,11 @@ export default function WalletScreen() {
                     <View
                       style={[
                         styles.transactionIcon,
-                        { backgroundColor: getTransactionIconBg(transaction.type) },
+                        {
+                          backgroundColor: getTransactionIconBg(
+                            transaction.type,
+                          ),
+                        },
                       ]}
                     >
                       <Feather
@@ -335,7 +399,10 @@ export default function WalletScreen() {
                       />
                     </View>
                     <View style={styles.transactionInfo}>
-                      <AjoTypography variant="bodySmall" color={colors.textPrimary}>
+                      <AjoTypography
+                        variant="bodySmall"
+                        color={colors.textPrimary}
+                      >
                         {transaction.reference ?? transaction.type}
                       </AjoTypography>
                       <AjoTypography variant="chip" color={colors.textTertiary}>
@@ -349,7 +416,8 @@ export default function WalletScreen() {
                       color={getTransactionAmountColor(transaction.type)}
                       style={styles.transactionAmount}
                     >
-                      {getTransactionPrefix(transaction.type)}₦{transaction.amount.toLocaleString()}
+                      {getTransactionPrefix(transaction.type)}₦
+                      {transaction.amount.toLocaleString()}
                     </AjoTypography>
                     <StatusBadge status={transaction.status} />
                   </View>
@@ -365,7 +433,7 @@ export default function WalletScreen() {
       {/* Message Sheet */}
       <ReusableBottomSheet
         ref={messageSheetRef}
-        snapPoints={["auto"]}
+        snapPoints={["40%"]}
         initialIndex={-1}
         enablePanDownToClose
       >
@@ -378,13 +446,23 @@ export default function WalletScreen() {
                 color={messageData.isSuccess ? colors.success : colors.error}
               />
             </View>
-            <AjoTypography variant="h2" style={styles.messageTitle}>
+            <AjoTypography variant="body" style={styles.messageTitle}>
               {messageData.title}
             </AjoTypography>
-            <AjoTypography variant="body" color={colors.textSecondary} style={styles.messageBody}>
+            <AjoTypography
+              variant="mono"
+              color={colors.textSecondary}
+              style={styles.messageBody}
+            >
               {messageData.message}
             </AjoTypography>
-            <AjoButton style={styles.messageButton} onPress={() => { close(); if (messageData.onOk) messageData.onOk(); }}>
+            <AjoButton
+              style={styles.messageButton}
+              onPress={() => {
+                close();
+                if (messageData.onOk) messageData.onOk();
+              }}
+            >
               <AjoTypography variant="button" color={colors.buttonText}>
                 OK
               </AjoTypography>
@@ -399,7 +477,9 @@ export default function WalletScreen() {
         snapPoints={["50%"]}
         initialIndex={-1}
         enablePanDownToClose
-        onClose={() => { if (promptData.onCancel) promptData.onCancel(); }}
+        onClose={() => {
+          if (promptData.onCancel) promptData.onCancel();
+        }}
       >
         {({ close }) => (
           <View style={styles.promptSheetContent}>
@@ -425,7 +505,10 @@ export default function WalletScreen() {
             <View style={styles.promptButtons}>
               <AjoButton
                 style={[styles.promptButton, styles.promptCancelButton]}
-                onPress={() => { if (promptData.onCancel) promptData.onCancel(); close(); }}
+                onPress={() => {
+                  if (promptData.onCancel) promptData.onCancel();
+                  close();
+                }}
               >
                 <AjoTypography variant="button" color={colors.textPrimary}>
                   Cancel
@@ -456,7 +539,9 @@ export default function WalletScreen() {
 }
 
 // --- Helper functions ---
-function getTransactionIcon(type: TransactionOut["type"]): keyof typeof Feather.glyphMap {
+function getTransactionIcon(
+  type: TransactionOut["type"],
+): keyof typeof Feather.glyphMap {
   switch (type) {
     case "funding":
       return "arrow-down";
@@ -539,7 +624,9 @@ function StatusBadge({ status }: { status: TransactionOut["status"] }) {
   }[status];
 
   return (
-    <View style={[styles.statusBadge, { backgroundColor: config.color + "20" }]}>
+    <View
+      style={[styles.statusBadge, { backgroundColor: config.color + "20" }]}
+    >
       <AjoTypography variant="chip" color={config.color}>
         {config.label}
       </AjoTypography>
@@ -676,12 +763,14 @@ const styles = StyleSheet.create({
   messageTitle: {
     marginBottom: spacing.sm,
     textAlign: "center",
+    color: colors.textInverted,
   },
   messageBody: {
     textAlign: "center",
     marginBottom: spacing.lg,
     lineHeight: 22,
     paddingHorizontal: spacing.md,
+    color: colors.textInverted,
   },
   messageButton: {
     width: "100%",

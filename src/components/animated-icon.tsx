@@ -1,7 +1,7 @@
 import { colors } from '@/theme';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, View } from 'react-native'; // 🟢 Added ActivityIndicator
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -41,7 +41,12 @@ export function AnimatedSplashOverlay() {
         }
       })}
       style={styles.backgroundSolidColor}
-    />
+    >
+      {/* 🟢 Centered Loader Container */}
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    </Animated.View>
   );
 }
 
@@ -129,5 +134,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: colors.primarySoft,
     zIndex: 1000,
+  },
+  // 🟢 Centering Styles for the Loader
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

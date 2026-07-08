@@ -232,11 +232,11 @@ export default function TransactionHistoryScreen() {
                           />
                         </View>
                         <View style={styles.transactionInfo}>
-                          <AjoTypography variant="cardTitle">
+                          <AjoTypography variant="body">
                             {transaction.reference || transaction.type}
                           </AjoTypography>
                           <AjoTypography
-                            variant="label"
+                            variant="monoSmall"
                             color={colors.textTertiary}
                           >
                             {formatDate(transaction.created_at)}
@@ -245,7 +245,7 @@ export default function TransactionHistoryScreen() {
                       </View>
                       <View style={styles.transactionRight}>
                         <AjoTypography
-                          variant="amountHero"
+                          variant="amount"
                           color={getTransactionAmountColor(transaction.type)}
                         >
                           {getTransactionPrefix(transaction.type)}₦
@@ -265,7 +265,7 @@ export default function TransactionHistoryScreen() {
                           ]}
                         >
                           <AjoTypography
-                            variant="label"
+                            variant="monoSmall"
                             color={
                               transaction.status === "success"
                                 ? colors.success

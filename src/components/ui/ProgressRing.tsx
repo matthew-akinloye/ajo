@@ -74,6 +74,6 @@ const styles = StyleSheet.create({
   percentageText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.textInverted,
+    color: colors.primary,
   },
 });

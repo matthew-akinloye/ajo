@@ -1,22 +1,24 @@
 // app/(tabs)/circles/create.tsx
+import ReusableBottomSheet, {
+  ReusableBottomSheetRef,
+} from "@/components/smt/smt-bottom-sheet";
 import AjoButton from "@/components/ui/AjoButton";
 import { AjoCard } from "@/components/ui/AjoCard";
 import AjoInput from "@/components/ui/AjoInput";
 import { AjoTypography } from "@/components/ui/AjoTypography";
-import ReusableBottomSheet, { ReusableBottomSheetRef } from "@/components/smt/smt-bottom-sheet";
 import { apiService } from "@/services/api.service";
 import { colors } from "@/theme/colors";
-import { spacing } from "@/theme/spacing";
 import { radius } from "@/theme/radius";
+import { spacing } from "@/theme/spacing";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import {
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
-  SafeAreaView,
 } from "react-native";
 
 type Step = 1 | 2 | 3;
@@ -33,9 +35,13 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
   const [name, setName] = useState("");
   const [circleType, setCircleType] = useState<"private" | "public">("private");
   const [amount, setAmount] = useState("");
-  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly">("weekly");
+  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly">(
+    "weekly",
+  );
   const [memberCapacity, setMemberCapacity] = useState("5");
-  const [payoutOrder, setPayoutOrder] = useState<"random" | "sequential">("random");
+  const [payoutOrder, setPayoutOrder] = useState<"random" | "sequential">(
+    "random",
+  );
   const [openJoin, setOpenJoin] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdCircle, setCreatedCircle] = useState<any>(null);
@@ -51,7 +57,12 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
     onOk?: () => void;
   }>({ title: "", message: "", isSuccess: false });
 
-  const showMessage = (title: string, message: string, isSuccess: boolean, onOk?: () => void) => {
+  const showMessage = (
+    title: string,
+    message: string,
+    isSuccess: boolean,
+    onOk?: () => void,
+  ) => {
     setMessageData({ title, message, isSuccess, onOk });
     messageSheetRef.current?.snapToIndex(0);
   };
@@ -64,12 +75,20 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
     }
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) {
-      showMessage("Invalid Amount", "Contribution amount must be greater than 0.", false);
+      showMessage(
+        "Invalid Amount",
+        "Contribution amount must be greater than 0.",
+        false,
+      );
       return false;
     }
     const cap = parseInt(memberCapacity);
     if (isNaN(cap) || cap < 2 || cap > 50) {
-      showMessage("Invalid Capacity", "Member capacity must be between 2 and 50.", false);
+      showMessage(
+        "Invalid Capacity",
+        "Member capacity must be between 2 and 50.",
+        false,
+      );
       return false;
     }
     return true;
@@ -101,7 +120,7 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
       showMessage(
         "Error",
         error instanceof Error ? error.message : "Failed to create circle.",
-        false
+        false,
       );
     } finally {
       setIsSubmitting(false);
@@ -114,7 +133,7 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
 
   const goToCircle = () => {
     if (createdCircle) {
-      router.push(`/(tabs)/circle/${createdCircle.id}`);
+      router.push(`/(tabs)/circles/${createdCircle.id}`);
     } else {
       onClose();
     }
@@ -146,10 +165,7 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
           </View>
           {s < 3 && (
             <View
-              style={[
-                styles.stepLine,
-                s < step && styles.stepLineCompleted,
-              ]}
+              style={[styles.stepLine, s < step && styles.stepLineCompleted]}
             />
           )}
         </View>
@@ -176,7 +192,9 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
             placeholder="e.g., Family Savings"
             value={name}
             onChangeText={setName}
-            leftIcon={<Feather name="users" size={20} color={colors.textTertiary} />}
+            leftIcon={
+              <Feather name="users" size={20} color={colors.textTertiary} />
+            }
             containerStyle={styles.input}
           />
         </AjoCard>
@@ -196,14 +214,18 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
                 onPress={() => setCircleType(type as any)}
               >
                 <View style={styles.radioCircle}>
-                  {circleType === type && <View style={styles.radioCircleSelected} />}
+                  {circleType === type && (
+                    <View style={styles.radioCircleSelected} />
+                  )}
                 </View>
                 <View style={styles.radioText}>
                   <AjoTypography variant="bodySmall" color={colors.textPrimary}>
                     {type === "private" ? "Private" : "Public"}
                   </AjoTypography>
                   <AjoTypography variant="chip" color={colors.textTertiary}>
-                    {type === "private" ? "People you invite" : "Open to community"}
+                    {type === "private"
+                      ? "People you invite"
+                      : "Open to community"}
                   </AjoTypography>
                 </View>
               </TouchableOpacity>
@@ -218,7 +240,13 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
             value={amount}
             onChangeText={setAmount}
             keyboardType="numeric"
-            leftIcon={<Feather name="dollar-sign" size={20} color={colors.textTertiary} />}
+            leftIcon={
+              <Feather
+                name="dollar-sign"
+                size={20}
+                color={colors.textTertiary}
+              />
+            }
             containerStyle={styles.input}
             rightComponent={
               <View style={styles.currencyLabel}>
@@ -246,7 +274,11 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
               >
                 <AjoTypography
                   variant="bodySmall"
-                  color={frequency === freq ? colors.textInverted : colors.textPrimary}
+                  color={
+                    frequency === freq
+                      ? colors.textInverted
+                      : colors.textPrimary
+                  }
                 >
                   {freq.charAt(0).toUpperCase() + freq.slice(1)}
                 </AjoTypography>
@@ -271,7 +303,11 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
               >
                 <AjoTypography
                   variant="bodySmall"
-                  color={parseInt(memberCapacity) === num ? colors.textInverted : colors.textPrimary}
+                  color={
+                    parseInt(memberCapacity) === num
+                      ? colors.textInverted
+                      : colors.textPrimary
+                  }
                 >
                   {num}
                 </AjoTypography>
@@ -286,7 +322,11 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
               inputStyle={styles.customMemberText}
             />
           </View>
-          <AjoTypography variant="chip" color={colors.textTertiary} style={styles.helperText}>
+          <AjoTypography
+            variant="chip"
+            color={colors.textTertiary}
+            style={styles.helperText}
+          >
             Including you
           </AjoTypography>
         </AjoCard>
@@ -307,7 +347,11 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
               >
                 <AjoTypography
                   variant="bodySmall"
-                  color={payoutOrder === order ? colors.textInverted : colors.textPrimary}
+                  color={
+                    payoutOrder === order
+                      ? colors.textInverted
+                      : colors.textPrimary
+                  }
                 >
                   {order.charAt(0).toUpperCase() + order.slice(1)}
                 </AjoTypography>
@@ -322,23 +366,33 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
           </AjoTypography>
           <View style={styles.toggleRow}>
             <TouchableOpacity
-              style={[styles.toggleOption, openJoin === true && styles.toggleOptionActive]}
+              style={[
+                styles.toggleOption,
+                openJoin === true && styles.toggleOptionActive,
+              ]}
               onPress={() => setOpenJoin(true)}
             >
               <AjoTypography
                 variant="bodySmall"
-                color={openJoin === true ? colors.textInverted : colors.textPrimary}
+                color={
+                  openJoin === true ? colors.textInverted : colors.textPrimary
+                }
               >
                 Yes
               </AjoTypography>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.toggleOption, openJoin === false && styles.toggleOptionActive]}
+              style={[
+                styles.toggleOption,
+                openJoin === false && styles.toggleOptionActive,
+              ]}
               onPress={() => setOpenJoin(false)}
             >
               <AjoTypography
                 variant="bodySmall"
-                color={openJoin === false ? colors.textInverted : colors.textPrimary}
+                color={
+                  openJoin === false ? colors.textInverted : colors.textPrimary
+                }
               >
                 No (approval required)
               </AjoTypography>
@@ -363,18 +417,42 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
       <AjoCard padding={spacing.md} style={styles.reviewCard}>
         {[
           { icon: "users", label: "Circle name", value: name },
-          { icon: "dollar-sign", label: "Contribution", value: `₦${parseFloat(amount).toLocaleString()} / ${frequency}` },
-          { icon: "users", label: "Members", value: `${memberCapacity} (including you)` },
-          { icon: "lock", label: "Circle type", value: circleType === "private" ? "Private" : "Public" },
-          { icon: "shuffle", label: "Payout order", value: payoutOrder.charAt(0).toUpperCase() + payoutOrder.slice(1) },
-          { icon: "user-plus", label: "Open join", value: openJoin ? "Yes" : "No (approval required)" },
+          {
+            icon: "dollar-sign",
+            label: "Contribution",
+            value: `₦${parseFloat(amount).toLocaleString()} / ${frequency}`,
+          },
+          {
+            icon: "users",
+            label: "Members",
+            value: `${memberCapacity} (including you)`,
+          },
+          {
+            icon: "lock",
+            label: "Circle type",
+            value: circleType === "private" ? "Private" : "Public",
+          },
+          {
+            icon: "shuffle",
+            label: "Payout order",
+            value: payoutOrder.charAt(0).toUpperCase() + payoutOrder.slice(1),
+          },
+          {
+            icon: "user-plus",
+            label: "Open join",
+            value: openJoin ? "Yes" : "No (approval required)",
+          },
         ].map((item, index) => (
           <View
             key={index}
             style={[styles.reviewItem, index === 5 && styles.reviewItemLast]}
           >
             <View style={styles.reviewIcon}>
-              <Feather name={item.icon as any} size={16} color={colors.primary} />
+              <Feather
+                name={item.icon as any}
+                size={16}
+                color={colors.primary}
+              />
             </View>
             <View style={styles.reviewContent}>
               <AjoTypography variant="chip" color={colors.textTertiary}>
@@ -384,7 +462,10 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
                 {item.value}
               </AjoTypography>
             </View>
-            <TouchableOpacity onPress={() => setStep(1)} style={styles.editButton}>
+            <TouchableOpacity
+              onPress={() => setStep(1)}
+              style={styles.editButton}
+            >
               <Feather name="edit-2" size={14} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -393,8 +474,13 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
 
       <View style={styles.infoBox}>
         <Feather name="info" size={16} color={colors.primary} />
-        <AjoTypography variant="bodySmall" color={colors.textSecondary} style={styles.infoText}>
-          Your circle will be created once you confirm. You can invite members afterwards.
+        <AjoTypography
+          variant="bodySmall"
+          color={colors.textSecondary}
+          style={styles.infoText}
+        >
+          Your circle will be created once you confirm. You can invite members
+          afterwards.
         </AjoTypography>
       </View>
     </View>
@@ -407,7 +493,11 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
         <AjoTypography variant="h2" style={styles.successTitle}>
           Circle Created!
         </AjoTypography>
-        <AjoTypography variant="body" color={colors.textSecondary} style={styles.successSubtitle}>
+        <AjoTypography
+          variant="body"
+          color={colors.textSecondary}
+          style={styles.successSubtitle}
+        >
           Your circle "{name}" is now live. Invite members to start saving.
         </AjoTypography>
       </View>
@@ -415,16 +505,32 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
       <AjoCard padding={spacing.md} style={styles.summaryCard}>
         {[
           { icon: "users", label: "Circle name", value: name },
-          { icon: "dollar-sign", label: "Contribution", value: `₦${parseFloat(amount).toLocaleString()} / ${frequency}` },
-          { icon: "users", label: "Members", value: `${memberCapacity} (including you)` },
-          { icon: "lock", label: "Circle type", value: circleType === "private" ? "Private" : "Public" },
+          {
+            icon: "dollar-sign",
+            label: "Contribution",
+            value: `₦${parseFloat(amount).toLocaleString()} / ${frequency}`,
+          },
+          {
+            icon: "users",
+            label: "Members",
+            value: `${memberCapacity} (including you)`,
+          },
+          {
+            icon: "lock",
+            label: "Circle type",
+            value: circleType === "private" ? "Private" : "Public",
+          },
         ].map((item, index) => (
           <View
             key={index}
             style={[styles.summaryItem, index === 3 && styles.summaryItemLast]}
           >
             <View style={styles.summaryIcon}>
-              <Feather name={item.icon as any} size={16} color={colors.primary} />
+              <Feather
+                name={item.icon as any}
+                size={16}
+                color={colors.primary}
+              />
             </View>
             <View style={styles.summaryContent}>
               <AjoTypography variant="chip" color={colors.textTertiary}>
@@ -440,8 +546,13 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
 
       <View style={styles.activationCard}>
         <Feather name="shield" size={16} color={colors.primary} />
-        <AjoTypography variant="bodySmall" color={colors.textPrimary} style={styles.activationText}>
-          Your circle will activate when all members join and complete their first contribution.
+        <AjoTypography
+          variant="bodySmall"
+          color={colors.textPrimary}
+          style={styles.activationText}
+        >
+          Your circle will activate when all members join and complete their
+          first contribution.
         </AjoTypography>
       </View>
 
@@ -449,7 +560,11 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
         <AjoButton
           title="Invite members"
           onPress={() => {
-            showMessage("Invite", "Invite members to your circle (coming soon)", false);
+            showMessage(
+              "Invite",
+              "Invite members to your circle (coming soon)",
+              false,
+            );
           }}
         />
         <AjoButton
@@ -491,7 +606,10 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
       {step < 3 && (
         <View style={styles.footer}>
           {step === 2 && (
-            <TouchableOpacity onPress={() => setStep(1)} style={styles.backLink}>
+            <TouchableOpacity
+              onPress={() => setStep(1)}
+              style={styles.backLink}
+            >
               <AjoTypography variant="bodySmall" color={colors.textSecondary}>
                 ← Back
               </AjoTypography>
@@ -510,7 +628,7 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
       {/* Message Sheet */}
       <ReusableBottomSheet
         ref={messageSheetRef}
-        snapPoints={["auto"]}
+        snapPoints={["40%"]}
         initialIndex={-1}
         enablePanDownToClose
       >
@@ -524,7 +642,11 @@ export default function CreateCircleModal({ onClose }: CreateCircleModalProps) {
             <AjoTypography variant="h2" style={styles.messageTitle}>
               {messageData.title}
             </AjoTypography>
-            <AjoTypography variant="body" color={colors.textSecondary} style={styles.messageBody}>
+            <AjoTypography
+              variant="body"
+              color={colors.textSecondary}
+              style={styles.messageBody}
+            >
               {messageData.message}
             </AjoTypography>
             <AjoButton

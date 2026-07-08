@@ -36,10 +36,10 @@ export default function NotificationsScreen() {
     try {
       const [notificationsData, inviteData] = await Promise.all([
         apiService.listNotifications(),
-        apiService.getInviteCode?.() ?? Promise.resolve("AJO-2024-X7K9"), // fallback if method not exists
+        apiService.getInviteCode?.() ?? Promise.resolve(""), // fallback if method not exists
       ]);
       setNotifications(notificationsData);
-      setInviteCode(inviteData?.code ?? inviteData ?? "AJO-2024-X7K9");
+      setInviteCode(inviteData ?? "");
     } catch (error) {
       console.error("Failed to load data:", error);
     } finally {

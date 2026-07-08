@@ -349,10 +349,10 @@ export default function WithdrawScreen() {
                 color={messageModal.isSuccess ? colors.success : colors.error}
               />
             </View>
-            <AjoTypography variant="h2" style={styles.modalTitle}>
+            <AjoTypography variant="body" style={styles.modalTitle}>
               {messageModal.title}
             </AjoTypography>
-            <AjoTypography variant="body" color={colors.textSecondary} style={styles.modalMessage}>
+            <AjoTypography variant="mono" color={colors.textSecondary} style={styles.modalMessage}>
               {messageModal.message}
             </AjoTypography>
             <AjoButton

@@ -1,13 +1,18 @@
 // app/(tabs)/circles/index.tsx
 import { CircleList } from "@/components/circles/CircleList";
+import ReusableBottomSheet, {
+  ReusableBottomSheetRef,
+} from "@/components/smt/smt-bottom-sheet";
 import Header from "@/components/smt/smt-header";
+import AjoButton from "@/components/ui/AjoButton";
 import { AjoTypography } from "@/components/ui/AjoTypography";
-import ReusableBottomSheet, { ReusableBottomSheetRef } from "@/components/smt/smt-bottom-sheet";
 import { apiService } from "@/services/api.service";
 import { colors } from "@/theme/colors";
+import { radius } from "@/theme/radius";
 import { spacing } from "@/theme/spacing";
 import { Feather } from "@expo/vector-icons";
-import { useState, useEffect, useRef } from "react";
+import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   Modal,
   RefreshControl,
@@ -17,9 +22,6 @@ import {
   View,
 } from "react-native";
 import CreateCircleModal from "./create";
-import { radius } from "@/theme/radius";
-import AjoButton from "@/components/ui/AjoButton";
-import { router } from "expo-router";
 
 export default function CirclesScreen() {
   const [circles, setCircles] = useState<any[]>([]);
@@ -69,12 +71,18 @@ export default function CirclesScreen() {
           title="Circles"
           rightButtons={[
             {
-              icon: <Feather name="plus" size={24} color={colors.textPrimary} />,
+              icon: (
+                <Feather name="plus" size={24} color={colors.textPrimary} />
+              ),
               onPress: () => setShowCreateModal(true),
             },
             {
-              icon: <Feather name="mail" size={24} color={colors.textPrimary} />,
-              onPress: () => {router.push("/circles/invites")},
+              icon: (
+                <Feather name="mail" size={24} color={colors.textPrimary} />
+              ),
+              onPress: () => {
+                router.push("/circles/invites");
+              },
             },
           ]}
           headerStyle={styles.header}
@@ -97,7 +105,10 @@ export default function CirclesScreen() {
             </View>
           ) : (
             <CircleList
-              circles={circles}
+              circles={circles} // CircleOut[]
+              onPress={(circle) => router.push(`/circles/${circle.id}`)}
+              showJoinButton={false}
+              // onJoin={(circle) => handleJoin(circle.id)}
               emptyMessage="You haven't joined or created any circles yet."
             />
           )}
@@ -117,7 +128,7 @@ export default function CirclesScreen() {
       {/* Error Message Sheet */}
       <ReusableBottomSheet
         ref={messageSheetRef}
-        snapPoints={["auto"]}
+        snapPoints={["40%"]}
         initialIndex={-1}
         enablePanDownToClose
       >
@@ -131,7 +142,11 @@ export default function CirclesScreen() {
             <AjoTypography variant="body" style={styles.messageTitle}>
               {messageData.title}
             </AjoTypography>
-            <AjoTypography variant="mono" color={colors.textSecondary} style={styles.messageBody}>
+            <AjoTypography
+              variant="mono"
+              color={colors.textSecondary}
+              style={styles.messageBody}
+            >
               {messageData.message}
             </AjoTypography>
             <AjoButton

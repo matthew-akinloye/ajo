@@ -13,14 +13,14 @@ import { radius, spacing } from "@/theme/spacing";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    Pressable,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
+  Alert,
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
 } from "react-native";
 
 export default function ExploreScreen() {
@@ -82,7 +82,7 @@ export default function ExploreScreen() {
 
   const handleCirclePress = (circle: CircleOut) => {
     // TODO: Navigate to circle detail screen when created
-    // router.push(`/circle/${circle.id}` as any);
+    // router.push(`/circles/${circle.id}` as any);
     Alert.alert(
       "Circle Details",
       `Navigate to circle ${circle.id} (coming soon)`,

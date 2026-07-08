@@ -9,7 +9,7 @@ import { CircleOut, ContributionOut, WalletOut } from "@/services/api.types";
 import { colors } from "@/theme/colors";
 import { spacing } from "@/theme/spacing";
 import { Feather } from "@expo/vector-icons";
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -194,157 +194,14 @@ export default function HomeScreen() {
 
   // Circles list with proper navigation
   const renderCirclesList = () => {
-    if (circles.length === 0) {
-      return (
-        // <View style={styles.emptyStateContainer}>
-        //   <Card variant="default" padding={spacing.lg} style={styles.emptyCard}>
-        //     <View style={styles.emptyIconContainer}>
-        //       <Feather name="users" size={24} color={colors.textTertiary} />
-        //     </View>
-        //     <AjoTypography variant="body" style={styles.emptyTitle}>
-        //       No circles yet
-        //     </AjoTypography>
-        //     <AjoTypography
-        //       variant="bodySmall"
-        //       color={colors.textTertiary}
-        //       style={styles.emptySubtitle}
-        //     >
-        //       Create a circle or join one to start saving together.
-        //     </AjoTypography>
-        //     <TouchableOpacity
-        //       style={styles.emptyAction}
-        //       onPress={() => router.push("/explore")}
-        //     >
-        //       <AjoTypography variant="bodySmall" color={colors.primary}>
-        //         Explore circles
-        //       </AjoTypography>
-        //       <Feather name="arrow-right" size={12} color={colors.primary} />
-        //     </TouchableOpacity>
-        //   </Card>
-
-        //   <Card
-        //     variant="default"
-        //     padding={spacing.md}
-        //     style={styles.howAjoCard}
-        //   >
-        //     <View style={styles.howAjoRow}>
-        //       <View style={styles.howAjoIcon}>
-        //         <Feather name="shield" size={16} color={colors.primary} />
-        //       </View>
-        //       <View style={styles.howAjoText}>
-        //         <AjoTypography variant="bodySmall" color={colors.textPrimary}>
-        //           How ajo works
-        //         </AjoTypography>
-        //         <AjoTypography variant="bodySmall" color={colors.textTertiary}>
-        //           Savings circles, shared goals, built on trust.
-        //         </AjoTypography>
-        //       </View>
-        //     </View>
-        //     <TouchableOpacity
-        //       style={styles.howAjoAction}
-        //       onPress={() => router.push("/how-it-works")}
-        //     >
-        //       <AjoTypography variant="bodySmall" color={colors.primary}>
-        //         Learn more
-        //       </AjoTypography>
-        //       <Feather name="arrow-right" size={12} color={colors.primary} />
-        //     </TouchableOpacity>
-        //   </Card>
-        // </View>
-        <CircleList
-          circles={circles}
-          onPress={(circle) => router.push(`/circle/${circle.id}`)}
-        />
-      );
-    }
-
     return (
-      <View style={styles.circlesSection}>
-        <View style={styles.sectionHeader}>
-          <AjoTypography variant="monoSmall">Your circles</AjoTypography>
-          <TouchableOpacity onPress={() => router.push("/explore")}>
-            <AjoTypography
-              variant="monoSmall"
-              color={colors.primary}
-              style={styles.viewAll}
-            >
-              View all
-            </AjoTypography>
-          </TouchableOpacity>
-        </View>
-        {circles.map((circle) => (
-          <TouchableOpacity
-            key={circle.id}
-            style={styles.circleCard}
-            onPress={() => router.push(`/circle/${circle.id}`)}
-          >
-            <View style={styles.circleInfo}>
-              <View style={styles.circleHeader}>
-                <AjoTypography variant="cardTitle">{circle.name}</AjoTypography>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor:
-                        circle.status === "active"
-                          ? colors.successTint
-                          : colors.surface,
-                    },
-                  ]}
-                >
-                  <AjoTypography
-                    variant="chip"
-                    color={
-                      circle.status === "active"
-                        ? colors.success
-                        : colors.textSecondary
-                    }
-                  >
-                    {circle.status.toUpperCase()}
-                  </AjoTypography>
-                </View>
-              </View>
-              <View style={styles.circleDetails}>
-                <Feather
-                  name="calendar"
-                  size={12}
-                  color={colors.textTertiary}
-                />
-                <AjoTypography variant="bodySmall" color={colors.textSecondary}>
-                  ₦{circle.contribution_amount.toLocaleString()} /{" "}
-                  {circle.frequency}
-                </AjoTypography>
-                <View style={styles.divider} />
-                <Feather name="users" size={12} color={colors.textTertiary} />
-                <AjoTypography variant="bodySmall" color={colors.textSecondary}>
-                  {circle.member_count}/{circle.member_capacity}
-                </AjoTypography>
-              </View>
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${(circle.total_saved / circle.cycle_goal) * 100}%`,
-                      },
-                    ]}
-                  />
-                </View>
-                <AjoTypography variant="chip" color={colors.textTertiary}>
-                  ₦{circle.total_saved.toLocaleString()} / ₦
-                  {circle.cycle_goal.toLocaleString()}
-                </AjoTypography>
-              </View>
-            </View>
-            <Feather
-              name="chevron-right"
-              size={20}
-              color={colors.textTertiary}
-            />
-          </TouchableOpacity>
-        ))}
-      </View>
+      <CircleList
+        circles={circles} // CircleOut[]
+        onPress={(circle) => router.push(`/circles/${circle.id}`)}
+        showJoinButton={false}
+        // onJoin={(circle) => handleJoin(circle.id)}
+        emptyMessage="You haven't joined or created any circles yet."
+      />
     );
   };
 
@@ -381,7 +238,7 @@ export default function HomeScreen() {
 
         <View style={styles.greetingContainer}>
           <AjoTypography variant="tab" style={styles.greeting}>
-            {getGreeting()}, {user?.full_name?.split(' ')[0]}
+            {getGreeting()}, {user?.full_name?.split(" ")[0]}
           </AjoTypography>
           <AjoTypography variant="bodySmall" color={colors.textSecondary}>
             What would you like to do today?
@@ -467,7 +324,11 @@ export default function HomeScreen() {
             onPress={handleFundWallet}
           >
             <View style={styles.fundWalletIcon}>
-              <Ionicons name="wallet-outline" size={16} color={colors.primary} />
+              <Ionicons
+                name="wallet-outline"
+                size={16}
+                color={colors.primary}
+              />
             </View>
             <View style={styles.fundWalletText}>
               <AjoTypography variant="tab" color={colors.textPrimary}>

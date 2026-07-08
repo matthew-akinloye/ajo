@@ -11,6 +11,7 @@ import {
   UserUpdateRequest,
 } from "@/services/api.types";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType {
   user: UserOut | null;
@@ -60,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await (apiService as any).clearSession?.();
     setUser(null);
+    await AsyncStorage.removeItem('hasSeenGuide');
   };
 
   const updateUser = async (data: UserUpdateRequest) => {

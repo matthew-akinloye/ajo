@@ -9,6 +9,7 @@ export default function CirclesLayout() {
       <Stack.Screen name="join" />
       <Stack.Screen name="payouts" />
       <Stack.Screen name="requests" />
+      <Stack.Screen name="id" />
     </Stack>
   );
 }

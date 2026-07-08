@@ -3,28 +3,34 @@
  * Shows detailed information about a specific circle
  */
 
-import { PinModal, PinModalRef } from "@/components/ui/PinModal";
+import ReusableBottomSheet, {
+  ReusableBottomSheetRef,
+} from "@/components/smt/smt-bottom-sheet";
 import Header from "@/components/smt/smt-header";
-import { Card } from "@/components/ui/Card";
+import AjoButton from "@/components/ui/AjoButton";
 import { AjoTypography } from "@/components/ui/AjoTypography";
-import  AjoButton  from "@/components/ui/AjoButton";
-import ReusableBottomSheet, { ReusableBottomSheetRef } from "@/components/smt/smt-bottom-sheet";
+import { Card } from "@/components/ui/Card";
+import { PinModal, PinModalRef } from "@/components/ui/PinModal";
 import { apiService } from "@/services/api.service";
-import { CircleOut, ContributionOut, MembershipOut } from "@/services/api.types";
-import { colors } from "@/theme/colors";
-import { spacing } from "@/theme/spacing";
-import { radius } from "@/theme/radius";
-import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams, router } from "expo-router";
-import { useEffect, useState, useRef } from "react";
 import {
+  CircleOut,
+  ContributionOut,
+  MembershipOut,
+} from "@/services/api.types";
+import { colors } from "@/theme/colors";
+import { radius } from "@/theme/radius";
+import { spacing } from "@/theme/spacing";
+import { Feather } from "@expo/vector-icons";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import {
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  View,
   TouchableOpacity,
-  Pressable,
+  View,
 } from "react-native";
 
 export default function CircleDetailScreen() {
@@ -69,12 +75,21 @@ export default function CircleDetailScreen() {
   });
 
   // --- Helpers ---
-  const showMessageSheet = (title: string, message: string, isSuccess: boolean, onOk?: () => void) => {
+  const showMessageSheet = (
+    title: string,
+    message: string,
+    isSuccess: boolean,
+    onOk?: () => void,
+  ) => {
     setMessageData({ title, message, isSuccess, onOk });
     messageSheetRef.current?.snapToIndex(0);
   };
 
-  const showConfirmSheet = (title: string, message: string, action: "contribute" | "invite") => {
+  const showConfirmSheet = (
+    title: string,
+    message: string,
+    action: "contribute" | "invite",
+  ) => {
     setConfirmData({ title, message, action });
     confirmSheetRef.current?.snapToIndex(0);
   };
@@ -116,7 +131,7 @@ export default function CircleDetailScreen() {
     showConfirmSheet(
       "Contribute",
       `You are about to contribute ₦${circle.contribution_amount.toLocaleString()} to "${circle.name}".`,
-      "contribute"
+      "contribute",
     );
   };
 
@@ -125,7 +140,7 @@ export default function CircleDetailScreen() {
     showConfirmSheet(
       "Generate Invite",
       "Create an invite link for this circle. Anyone with the link can join.",
-      "invite"
+      "invite",
     );
   };
 
@@ -140,7 +155,10 @@ export default function CircleDetailScreen() {
     if (!confirmData.action) return;
     // Open PIN modal
     pinModalRef.current?.show({
-      title: confirmData.action === "contribute" ? "Confirm Contribution" : "Generate Invite",
+      title:
+        confirmData.action === "contribute"
+          ? "Confirm Contribution"
+          : "Generate Invite",
       subtitle:
         confirmData.action === "contribute"
           ? `Enter your PIN to contribute ₦${circle?.contribution_amount.toLocaleString()}`
@@ -150,13 +168,28 @@ export default function CircleDetailScreen() {
           await apiService.verifyPin({ pin });
           if (confirmData.action === "contribute" && circle) {
             await apiService.makeContribution(circle.id, { pin });
-            showMessageSheet("Success", "Contribution recorded successfully!", true, () => loadCircleData());
+            showMessageSheet(
+              "Success",
+              "Contribution recorded successfully!",
+              true,
+              () => loadCircleData(),
+            );
           } else if (confirmData.action === "invite" && circle) {
-            const invite = await apiService.createInvite(circle.id, { invitee_contact: null });
-            showMessageSheet("Invite Created", `Share this code: ${invite.code}`, true);
+            const invite = await apiService.createInvite(circle.id, {
+              invitee_contact: null,
+            });
+            showMessageSheet(
+              "Invite Created",
+              `Share this code: ${invite.code}`,
+              true,
+            );
           }
         } catch (error: any) {
-          showMessageSheet("Action Failed", error.message || "Please try again.", false);
+          showMessageSheet(
+            "Action Failed",
+            error.message || "Please try again.",
+            false,
+          );
         }
       },
     });
@@ -165,7 +198,9 @@ export default function CircleDetailScreen() {
   // --- Compute progress ---
   const getProgress = () => {
     if (!circle) return 0;
-    return circle.cycle_goal > 0 ? (circle.total_saved / circle.cycle_goal) * 100 : 0;
+    return circle.cycle_goal > 0
+      ? (circle.total_saved / circle.cycle_goal) * 100
+      : 0;
   };
 
   // --- Render ---
@@ -213,8 +248,15 @@ export default function CircleDetailScreen() {
           title={circle.name}
           rightButtons={[
             {
-              icon: <Feather name="settings" size={20} color={colors.textPrimary} />,
-              onPress: () => showMessageSheet("Settings", "Circle settings (coming soon)", false),
+              icon: (
+                <Feather name="settings" size={20} color={colors.textPrimary} />
+              ),
+              onPress: () =>
+                showMessageSheet(
+                  "Settings",
+                  "Circle settings (coming soon)",
+                  false,
+                ),
             },
           ]}
         />
@@ -222,7 +264,11 @@ export default function CircleDetailScreen() {
         {/* Circle Status Card */}
         <Card variant="gradient" padding={spacing.xl} style={styles.statusCard}>
           <View style={styles.statusHeader}>
-            <AjoTypography variant="label" color={colors.textInverted} style={{ opacity: 0.8 }}>
+            <AjoTypography
+              variant="label"
+              color={colors.textInverted}
+              style={{ opacity: 0.8 }}
+            >
               STATUS
             </AjoTypography>
             <View style={styles.statusBadge}>
@@ -231,15 +277,25 @@ export default function CircleDetailScreen() {
               </AjoTypography>
             </View>
           </View>
-          <AjoTypography variant="body" color={colors.textInverted} style={styles.totalSaved}>
+          <AjoTypography
+            variant="body"
+            color={colors.textInverted}
+            style={styles.totalSaved}
+          >
             ₦{circle.total_saved.toLocaleString()}
           </AjoTypography>
-          <AjoTypography variant="label" color={colors.textInverted} style={{ opacity: 0.8 }}>
+          <AjoTypography
+            variant="label"
+            color={colors.textInverted}
+            style={{ opacity: 0.8 }}
+          >
             of ₦{circle.cycle_goal.toLocaleString()} saved
           </AjoTypography>
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${getProgress()}%` }]} />
+              <View
+                style={[styles.progressFill, { width: `${getProgress()}%` }]}
+              />
             </View>
             <AjoTypography variant="label" color={colors.textInverted}>
               {getProgress().toFixed(0)}%
@@ -274,7 +330,11 @@ export default function CircleDetailScreen() {
           <AjoTypography variant="monoSmall" style={styles.sectionTitle}>
             Circle Details
           </AjoTypography>
-          <Card variant="default" padding={spacing.lg} style={styles.detailCard}>
+          <Card
+            variant="default"
+            padding={spacing.lg}
+            style={styles.detailCard}
+          >
             <View style={styles.detailRow}>
               <AjoTypography variant="chip" color={colors.textTertiary}>
                 Contribution Amount
@@ -287,9 +347,7 @@ export default function CircleDetailScreen() {
               <AjoTypography variant="chip" color={colors.textTertiary}>
                 Frequency
               </AjoTypography>
-              <AjoTypography variant="body">
-                {circle.frequency}
-              </AjoTypography>
+              <AjoTypography variant="body">{circle.frequency}</AjoTypography>
             </View>
             <View style={styles.detailRow}>
               <AjoTypography variant="chip" color={colors.textTertiary}>
@@ -330,9 +388,17 @@ export default function CircleDetailScreen() {
               </AjoTypography>
             </TouchableOpacity>
           </View>
-          <Card variant="default" padding={spacing.md} style={styles.transactionCard}>
+          <Card
+            variant="default"
+            padding={spacing.md}
+            style={styles.transactionCard}
+          >
             {contributions.length === 0 ? (
-              <AjoTypography variant="body" color={colors.textTertiary} style={styles.emptyState}>
+              <AjoTypography
+                variant="body"
+                color={colors.textTertiary}
+                style={styles.emptyState}
+              >
                 No contributions yet
               </AjoTypography>
             ) : (
@@ -341,7 +407,8 @@ export default function CircleDetailScreen() {
                   key={contribution.id}
                   style={[
                     styles.contributionRow,
-                    index < contributions.slice(0, 5).length - 1 && styles.contributionRowBorder,
+                    index < contributions.slice(0, 5).length - 1 &&
+                      styles.contributionRowBorder,
                   ]}
                 >
                   <View style={styles.contributionLeft}>
@@ -349,7 +416,10 @@ export default function CircleDetailScreen() {
                       <Feather name="user" size={16} color={colors.primary} />
                     </View>
                     <View style={styles.contributionInfo}>
-                      <AjoTypography variant="bodySmall" color={colors.textPrimary}>
+                      <AjoTypography
+                        variant="bodySmall"
+                        color={colors.textPrimary}
+                      >
                         Member {contribution.user_id}
                       </AjoTypography>
                       <AjoTypography variant="chip" color={colors.textTertiary}>
@@ -375,7 +445,7 @@ export default function CircleDetailScreen() {
       {/* Message Sheet */}
       <ReusableBottomSheet
         ref={messageSheetRef}
-        snapPoints={["auto"]}
+        snapPoints={["40%"]}
         initialIndex={-1}
         enablePanDownToClose
       >
@@ -391,7 +461,11 @@ export default function CircleDetailScreen() {
             <AjoTypography variant="body" style={styles.messageTitle}>
               {messageData.title}
             </AjoTypography>
-            <AjoTypography variant="mono" color={colors.textSecondary} style={styles.messageBody}>
+            <AjoTypography
+              variant="mono"
+              color={colors.textSecondary}
+              style={styles.messageBody}
+            >
               {messageData.message}
             </AjoTypography>
             <AjoButton
@@ -412,7 +486,7 @@ export default function CircleDetailScreen() {
       {/* Confirm Sheet */}
       <ReusableBottomSheet
         ref={confirmSheetRef}
-        snapPoints={["auto"]}
+        snapPoints={["40%"]}
         initialIndex={-1}
         enablePanDownToClose
       >
@@ -422,7 +496,11 @@ export default function CircleDetailScreen() {
             <AjoTypography variant="body" style={styles.confirmTitle}>
               {confirmData.title}
             </AjoTypography>
-            <AjoTypography variant="mono" color={colors.textSecondary} style={styles.confirmMessage}>
+            <AjoTypography
+              variant="mono"
+              color={colors.textSecondary}
+              style={styles.confirmMessage}
+            >
               {confirmData.message}
             </AjoTypography>
             <View style={styles.confirmButtons}>
@@ -465,8 +543,17 @@ function StatusBadge({ status }: { status: "paid" | "late" | "missed" }) {
   }[status];
 
   return (
-    <View style={[styles.statusBadgeSmall, { backgroundColor: config.color + "20" }]}>
-      <AjoTypography variant="chip" color={config.color} style={{ fontSize: 10 }}>
+    <View
+      style={[
+        styles.statusBadgeSmall,
+        { backgroundColor: config.color + "20" },
+      ]}
+    >
+      <AjoTypography
+        variant="chip"
+        color={config.color}
+        style={{ fontSize: 10 }}
+      >
         {config.label.toUpperCase()}
       </AjoTypography>
     </View>
@@ -621,19 +708,22 @@ const styles = StyleSheet.create({
   },
   // Bottom sheet styles
   messageSheetContent: {
-    padding: spacing.lg,
+    padding: spacing.xs,
     alignItems: "center",
   },
   messageIcon: { marginBottom: spacing.md },
   messageTitle: {
     marginBottom: spacing.sm,
     textAlign: "center",
+    color: colors.textInverted,
   },
   messageBody: {
     textAlign: "center",
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     lineHeight: 22,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
+        color: colors.textInverted,
+
   },
   messageButton: {
     width: "100%",
@@ -643,19 +733,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   confirmSheetContent: {
-    padding: spacing.lg,
+    padding: spacing.xs,
     alignItems: "center",
+        color: colors.textInverted,
+
   },
   confirmTitle: {
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
     textAlign: "center",
+    color: colors.textInverted,
   },
   confirmMessage: {
     textAlign: "center",
     marginBottom: spacing.lg,
     lineHeight: 22,
     paddingHorizontal: spacing.md,
+    color: colors.textInverted,
   },
   confirmButtons: {
     flexDirection: "row",

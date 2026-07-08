@@ -9,24 +9,50 @@ import {
   JetBrainsMono_500Medium,
 } from "@expo-google-fonts/jetbrains-mono";
 import { useFonts } from "expo-font";
-import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from "expo-router";
+import {
+  DarkTheme,
+  DefaultTheme,
+  router,
+  Stack,
+  ThemeProvider,
+} from "expo-router";
 import { useColorScheme } from "react-native";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from "react";
 
 function AuthenticatedLayout() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [initialRoute, setInitialRoute] = useState<string | null>(null);
 
-  if (isLoading) {
+     useEffect(() => {
+    const checkGuide = async () => {
+      const hasSeenGuide = await AsyncStorage.getItem('hasSeenGuide');
+      // If the user hasn't seen the guide, start there
+      setInitialRoute(hasSeenGuide ? '(tabs)' : 'guide');
+    };
+    if (isAuthenticated) {
+      checkGuide();
+    }
+  }, [isAuthenticated]);
+
+    if (isLoading || initialRoute === null) {
     return <AnimatedSplashOverlay />;
   }
 
-  if (!isAuthenticated) {
-    console.log("Not authenticated");
-    router.push("/landing");
-  }
-  if (!isAuthenticated) {
+
+
+    // if (isLoading) {
+    //   return <AnimatedSplashOverlay />;
+    // }
+
+  // if (!isAuthenticated) {
+  //   router.push("/landing");
+  // }
+
+if (!isAuthenticated) {
     return (
       <Stack screenOptions={{ headerShown: false }} initialRouteName="landing">
         <Stack.Screen name="landing" />
@@ -36,11 +62,14 @@ function AuthenticatedLayout() {
     );
   }
 
+
   return (
-    <Stack screenOptions={{ headerShown: false }} initialRouteName="(tabs)">
+    <Stack screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
+      <Stack.Screen name="guide" />
       <Stack.Screen name="(tabs)" />
     </Stack>
   );
+
 }
 
 export default function TabLayout() {

@@ -5,15 +5,13 @@ import { radius } from "@/theme/radius";
 import { spacing } from "@/theme/spacing";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { View, TouchableOpacity, StyleSheet } from "react-native";
-
-
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface CircleListProps {
-  circles: CircleOut[];
-  onPress?: (circle: Circle) => void;
+  circles: CircleOut[]; // ✅ uses real API type
+  onPress?: (circle: CircleOut) => void;
   showJoinButton?: boolean;
-  onJoin?: (circle: Circle) => void;
+  onJoin?: (circle: CircleOut) => void;
   emptyMessage?: string;
 }
 
@@ -30,8 +28,19 @@ export function CircleList({
     return (
       <View style={styles.emptyContainer}>
         <Feather name="users" size={32} color={colors.textTertiary} />
-        <AjoTypography variant="body" color={colors.textSecondary} style={styles.emptyText}>
+        <AjoTypography
+          variant="body"
+          color={colors.textSecondary}
+          style={styles.emptyText}
+        >
           {emptyMessage}
+        </AjoTypography>
+        <AjoTypography
+          variant="bodySmall"
+          color={colors.textTertiary}
+          style={styles.emptySubtext}
+        >
+          Create or join a circle to get started.
         </AjoTypography>
       </View>
     );
@@ -39,82 +48,99 @@ export function CircleList({
 
   return (
     <View style={styles.container}>
-      {circles.map((circle) => (
-        <TouchableOpacity
-          key={circle.id}
-          style={styles.card}
-          onPress={() => {
-            if (onPress) onPress(circle);
-            else router.push(`/circle/${circle.id}`);
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.header}>
-            <AjoTypography variant="cardTitle" style={styles.name}>
-              {circle.name}
-            </AjoTypography>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(circle.status) }]}>
-              <AjoTypography variant="chip" color={colors.textInverted}>
-                {circle.status.toUpperCase()}
-              </AjoTypography>
-            </View>
-          </View>
+      {circles.map((circle) => {
+        const progress =
+          circle.cycle_goal > 0
+            ? Math.min((circle.total_saved / circle.cycle_goal) * 100, 100)
+            : 0;
 
-          <View style={styles.details}>
-            <View style={styles.detailItem}>
-              <Feather name="calendar" size={14} color={colors.textTertiary} />
-              <AjoTypography variant="bodySmall" color={colors.textSecondary}>
-                ₦{circle.contribution_amount.toLocaleString()} / {circle.frequency}
-              </AjoTypography>
-            </View>
-            <View style={styles.detailItem}>
-              <Feather name="users" size={14} color={colors.textTertiary} />
-              <AjoTypography variant="bodySmall" color={colors.textSecondary}>
-                {circle.member_count}/{circle.member_capacity}
-              </AjoTypography>
-            </View>
-          </View>
+        const statusColor = getStatusColor(circle.status);
 
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
+        return (
+          <TouchableOpacity
+            key={circle.id}
+            style={styles.card}
+            onPress={() => {
+              if (onPress) {
+                onPress(circle);
+              } else {
+                router.push(`/circles/${circle.id}`);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.header}>
+              <AjoTypography variant="cardTitle" style={styles.name}>
+                {circle.name}
+              </AjoTypography>
               <View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.min((circle.total_saved / circle.cycle_goal) * 100, 100)}%` },
-                ]}
-              />
+                style={[styles.statusBadge, { backgroundColor: statusColor }]}
+              >
+                <AjoTypography variant="chip" color={colors.textInverted}>
+                  {circle.status.toUpperCase()}
+                </AjoTypography>
+              </View>
             </View>
-            <AjoTypography variant="chip" color={colors.textTertiary}>
-              ₦{circle.total_saved.toLocaleString()} / ₦{circle.cycle_goal.toLocaleString()}
-            </AjoTypography>
-          </View>
 
-          {showJoinButton && circle.status !== "active" && (
-            <TouchableOpacity
-              style={styles.joinButton}
-              onPress={() => onJoin?.(circle)}
-            >
-              <AjoTypography variant="buttonSmall" color={colors.primary}>
-                Join
+            <View style={styles.details}>
+              <View style={styles.detailItem}>
+                <Feather
+                  name="calendar"
+                  size={14}
+                  color={colors.textTertiary}
+                />
+                <AjoTypography variant="bodySmall" color={colors.textSecondary}>
+                  ₦{circle.contribution_amount.toLocaleString()} /{" "}
+                  {circle.frequency}
+                </AjoTypography>
+              </View>
+              <View style={styles.detailItem}>
+                <Feather name="users" size={14} color={colors.textTertiary} />
+                <AjoTypography variant="bodySmall" color={colors.textSecondary}>
+                  Capacity: {circle.member_capacity}
+                </AjoTypography>
+              </View>
+            </View>
+
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View
+                  style={[styles.progressFill, { width: `${progress}%` }]}
+                />
+              </View>
+              <AjoTypography variant="chip" color={colors.textTertiary}>
+                ₦{circle.total_saved.toLocaleString()} / ₦
+                {circle.cycle_goal.toLocaleString()}
               </AjoTypography>
-            </TouchableOpacity>
-          )}
-        </TouchableOpacity>
-      ))}
+            </View>
+
+            {showJoinButton && circle.status === "forming" && (
+              <TouchableOpacity
+                style={styles.joinButton}
+                onPress={() => onJoin?.(circle)}
+              >
+                <AjoTypography variant="buttonSmall" color={colors.primary}>
+                  Join
+                </AjoTypography>
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
-function getStatusColor(status: string): string {
+function getStatusColor(status: CircleOut["status"]): string {
   switch (status) {
     case "forming":
-      return colors.warning;
+      return colors.warning || "#F59E0B";
     case "active":
-      return colors.success;
+      return colors.success || "#10B981";
     case "completed":
-      return colors.textTertiary;
+      return colors.textTertiary || "#9CA3AF";
     default:
-      return colors.surface;
+      return colors.surface || "#E5E7EB";
   }
 }
 
@@ -126,12 +152,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: radius.lg,
     padding: spacing.md,
-    borderWidth: 0.5,
+    borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: "rgba(0,0,0,0.02)",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   header: {
     flexDirection: "row",
@@ -142,11 +169,13 @@ const styles = StyleSheet.create({
   name: {
     flex: 1,
     marginRight: spacing.sm,
+    fontSize: 16,
+    fontWeight: "600",
   },
   statusBadge: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
   },
   details: {
     flexDirection: "row",
@@ -182,7 +211,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.primary,
-    borderRadius: 6,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary + "10",
   },
   emptyContainer: {
     alignItems: "center",
@@ -191,5 +221,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: "center",
+    marginTop: spacing.sm,
+  },
+  emptySubtext: {
+    textAlign: "center",
+    color: colors.textTertiary,
   },
 });
